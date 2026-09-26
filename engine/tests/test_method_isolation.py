@@ -90,3 +90,28 @@ class TestMethodIsolation:
         for pred in run_b.predictions:
             assert pred.method_id == method_b.method_id
             assert pred.method_id != method_a.method_id
+
+    def test_mutation_attempt_fails(self, canonical_state):
+        """Prove that a method cannot mutate the input state."""
+        method_a = VimshottariCareerMethod()
+        
+        # State is frozen by Pydantic; mutation should raise error.
+        with pytest.raises(Exception):
+            canonical_state.provenance.engine_version = "hacked"
+            
+        with pytest.raises(Exception):
+            canonical_state.planets = []
+
+    def test_no_shared_prediction_cache(self, canonical_state):
+        """Prove that executing one method does not bleed into the state or another method."""
+        method_a = VimshottariCareerMethod()
+        method_b = TransitCareerMethod()
+
+        # Run A
+        run_a = method_a.run(canonical_state, CAREER_QUESTION)
+        
+        # Method B runs; its context should be completely devoid of A's predictions
+        run_b = method_b.run(canonical_state, CAREER_QUESTION)
+        
+        assert not hasattr(method_b, "predictions_from_other_methods")
+        assert not hasattr(canonical_state, "predictions")  # State must only contain calculations

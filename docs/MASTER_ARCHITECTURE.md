@@ -1,10 +1,20 @@
 # Astro Intelligence OS - Master Architecture
 
-## 1. Current State
+## 1. Current Implementation State
 **Assessment Date:** 2026-09-26
-**Status:** Greenfield (Empty Repository)
+**Status:** IN_PROGRESS (Phase 5)
 
-Upon repository inspection, no existing functionality, code, frameworks, or databases exist. The only file present is the foundational `ASTRO_INTELLIGENCE_OS_MASTER_SPEC.md`.
+The repository currently implements the foundational deterministic engine in Python:
+- **`engine/src/astro_engine/`:** Calculation core using `pyswisseph` for astronomy, D1-D60 Vargas, Vimshottari Dashas, partial Shadbala, and Ashtakavarga.
+- **`state.py`:** Fully immutable, canonical `AstroState` object.
+- **`methods/`:** The execution SDK and two isolated methods (`VimshottariCareerMethod`, `TransitCareerMethod`).
+- **Tests:** A suite of 101 unit/integration tests running locally and via GitHub Actions CI.
+
+The architecture strictly differentiates between:
+- **VERIFIED:** Core conventions and infrastructure.
+- **EXPERIMENTAL:** Method execution SDK and methodologies.
+- **PARTIAL:** Shadbala and Pratyantar Dasha calculations.
+- **PLANNED:** Method Orchestrator, Convergence, Ensemble Evaluation.
 
 ## 2. Target State
 We will adopt a modular monorepo structure to isolate the calculation engine from the inference layers and product UIs.

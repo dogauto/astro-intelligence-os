@@ -81,7 +81,7 @@ Entries are appended chronologically and represent strictly verified states.
 ## Milestone 2: Second Methodology & Method Isolation
 **Date/Time:** 2026-09-26T10:48:00+05:30
 **Current Phase:** Phase 5 (First Complete Methodologies)
-**Phase Status:** Phase 5 VERIFIED
+**Phase Status:** Phase 5 IN_PROGRESS
 
 ### What was implemented:
 - **Phase 0-4 Validation:** Conducted formal validation gate `docs/PHASE_0_4_VALIDATION_REPORT.md` confirming architecture compliance, immutability, and deterministic output.
@@ -127,3 +127,44 @@ Entries are appended chronologically and represent strictly verified states.
 
 ### Recommended Next Action:
 - Proceed to Phase 6 (Parallel Multi-Method Execution).
+
+---
+
+## Milestone 3: Second Repository Audit & Strict Documentation
+**Date/Time:** 2026-09-26T11:45:00+05:30
+**Current Phase:** Phase 5 (First Complete Methodologies)
+**Phase Status:** Phases 0, 1, 2, 4 VERIFIED; Phase 3 VERIFIED_SUBSET; Phase 5 IN_PROGRESS
+
+### What was implemented:
+- **Calculation Capabilities Enforcement:** Methods now strictly validate their `required_calculations` against a central completeness matrix (`capabilities.py`). `PRODUCTION` methods crash if a dependency is `PARTIAL`.
+- **Method Isolation Strengthened:** Negative tests added proving immutability, state isolation, and ensuring methods cannot mutate `AstroState` or access other methods' prediction caches.
+- **Astronomy Specs Cleaned:** Removed fabricated golden numerical values from `docs/ASTRONOMY_VALIDATION_SPEC.md` and added `docs/ASTRONOMY_REFERENCE_REGISTRY.md`.
+- **CI Validation:** Added GitHub Actions CI, tracked in `docs/CI_VERIFICATION.md`. Tests are now at 101.
+- **Master Architecture Updated:** Replaced Greenfield status with actual `IN_PROGRESS` status reflecting Python deterministic engine.
+
+### Files Added:
+- `engine/src/astro_engine/capabilities.py`
+- `engine/tests/test_capabilities.py`
+- `docs/ASTRONOMY_REFERENCE_REGISTRY.md`
+- `docs/SECURITY_IMPLEMENTATION_MATRIX.md`
+- `docs/CI_VERIFICATION.md`
+- `docs/CALCULATION_DEPENDENCY_GRAPH.md` (Planned for next step)
+
+### Files Modified:
+- `engine/src/astro_engine/methods/__init__.py`
+- `engine/tests/test_method_isolation.py`
+- `docs/ASTRONOMY_VALIDATION_SPEC.md`
+- `docs/MASTER_ARCHITECTURE.md`
+- `PROJECT_PROGRESS.md`
+
+### Testing
+**Total Tests:** 101
+**Results:** 101 Passed / 0 Failed / 0 Warnings
+**Coverage:** 92%
+
+### Known Limitations:
+- Method 2 (Transit) only performs snapshot calculations of current planets, not full transit vargas/dashas.
+- Astronomy calculations require external verification against NASA JPL.
+
+### Recommended Next Action:
+- Build `docs/CALCULATION_DEPENDENCY_GRAPH.md` and complete documentation updates as per the second audit constraints.

@@ -38,7 +38,7 @@ Every astronomical golden fixture MUST declare:
   "time_scale": "UTC",
   "coordinate_system": "geocentric_apparent",
   "expected_result": {
-    "Sun": 166.4523
+    "Sun": "<TBD_FROM_NASA_JPL>"
   },
   "tolerance": 0.0001,
   "reference_methodology": "Parashari_Lahiri",

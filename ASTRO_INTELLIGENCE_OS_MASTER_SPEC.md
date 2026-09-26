@@ -45,8 +45,9 @@ Methods are independent execution units implementing the formal SDK.
 
 ## 7. Prediction Normalization & Convergence
 - **Normalization:** Predictions are mapped to standard dimensions (Domain, Event, Direction, Timing Window, Duration, Heuristic Magnitude).
-- **Convergence:** An orchestrator identifies temporal overlap and mechanism diversity across methods.
-- **Dissent:** The engine must actively track and explain *why* methods disagree (mechanism mismatch, timing shift).
+- **IMPORTANT - Convergence Gate:** Do not build convergence until independent execution, method isolation, and normalization are all formally VERIFIED. 
+- **Correlated Methods:** Execution independence does NOT equal evidence independence. Future convergence must track mechanism correlation (e.g. two methods using the same classical rule).
+- **Dissent:** The engine must actively track and explain *why* methods disagree.
 *See subordinate specs: `ENSEMBLE_SPEC.md`.*
 
 ## 8. Temporal Intelligence
@@ -68,7 +69,33 @@ Birth data (exact date, time, location) is highly sensitive. The architecture en
 The development proceeds incrementally, ensuring foundational calculations are proven before methodologies are built, and methodologies are proven before ML/Swarm layers are introduced.
 *See subordinate document: `IMPLEMENTATION_ROADMAP.md`.*
 
-## 13. Subordinate Specification Index
+## 13. System Status Semantics
+The repository uses strict lifecycle statuses:
+- **NOT_IMPLEMENTED:** No code exists.
+- **SPECIFIED:** Documentation/specs exist, but no code.
+- **IMPLEMENTED:** Code exists, but lacks tests or integration.
+- **EXPERIMENTAL:** Code exists, tests pass, pending external validation.
+- **VALIDATED:** Completely cross-checked against external references/fixtures.
+- **PRODUCTION:** Used safely in orchestrations.
+- **DEPRECATED:** No longer supported.
+- **BLOCKED:** Cannot proceed due to a missing upstream dependency.
+
+## 14. Acceptance Gates
+A later phase cannot become VERIFIED if an earlier gate is BLOCKED.
+- **GATE 0 —** Repository integrity
+- **GATE 1 —** Astronomy correctness
+- **GATE 2 —** Convention correctness
+- **GATE 3 —** AstroState correctness
+- **GATE 4 —** Calculation completeness
+- **GATE 5 —** Method correctness
+- **GATE 6 —** Method isolation
+- **GATE 7 —** Multi-method execution
+- **GATE 8 —** Provenance
+- **GATE 9 —** Evaluation
+- **GATE 10 —** Security
+- **GATE 11 —** Production readiness
+
+## 15. Subordinate Specification Index
 - `ASTRONOMY_VALIDATION_SPEC.md`
 - `TIME_LOCATION_VALIDATION_SPEC.md`
 - `CALCULATION_COMPLETENESS_MATRIX.md`

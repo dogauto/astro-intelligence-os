@@ -205,3 +205,12 @@ class Method(ABC):
     def can_handle(self, question: QuestionContext) -> bool:
         """Check if this method can address the given question."""
         return question.domain in self.supported_domains
+
+    def validate_capabilities(self) -> list[str]:
+        """
+        Validates that required calculations exist and meet the minimum maturity standard.
+        Raises CapabilityError if a PRODUCTION method relies on PARTIAL calculations.
+        Returns a list of warnings for EXPERIMENTAL methods relying on PARTIAL calculations.
+        """
+        from astro_engine.capabilities import validate_method_capabilities
+        return validate_method_capabilities(self.maturity.value, self.required_calculations)
