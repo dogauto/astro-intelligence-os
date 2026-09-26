@@ -1,0 +1,12 @@
+pyswisseph>=2.10.3.2
+pytz>=2024.1
+timezonefinder>=6.5.0
+pydantic>=2.7.0
+numpy>=1.26.0
+
+[dev]
+pytest>=8.0.0
+pytest-cov>=5.0.0
+pytest-xdist>=3.5.0
+ruff>=0.4.0
+mypy>=1.10.0
