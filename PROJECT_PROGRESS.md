@@ -8,13 +8,13 @@ Entries are appended chronologically and represent strictly verified states.
 ## Milestone 1: Core Engine & First Methodology
 **Date/Time:** 2026-09-26T10:40:11+05:30
 **Current Phase:** Phase 5 (First Complete Methodologies)
-**Phase Status:** Phases 0-4 VERIFIED, Phase 5 IN_PROGRESS
+**Phase Status:** Phases 0, 1, 2, 4 VERIFIED; Phase 3 VERIFIED_SUBSET; Phase 5 IN_PROGRESS
 
 ### What was implemented:
 - **Phase 0:** Complete architectural documentation suite (MASTER, ENSEMBLE, EVALUATION, etc.).
 - **Phase 1:** `AstronomyEngine` wrapper around Swiss Ephemeris (`pyswisseph`), `ConventionProfile` handling, and precise time/location parsing.
 - **Phase 2:** Canonical, immutable, serializable `AstroState` and `AstroStateBuilder`.
-- **Phase 3:** Professional calculation engine components: Vargas (D1-D60), Vimshottari Dasha, Shadbala (partial), and Ashtakavarga (BAV/SAV).
+- **Phase 3 (VERIFIED_SUBSET):** Professional calculation engine components: Vargas (D1-D60), Vimshottari Dasha (Maha/Antar), Shadbala (partial), and Ashtakavarga (BAV/SAV).
 - **Phase 4:** Formal `Method` SDK ensuring independent execution without LLM dependency.
 - **Phase 5 (Partial):** First complete methodology: `VimshottariCareerMethod` using Parashari rules.
 

@@ -15,9 +15,10 @@ The development of the Astro Intelligence OS will proceed iteratively. We priori
 ## [VERIFIED] Phase 2: AstroState
 - [x] Create a canonical immutable/serializable `AstroState` object.
 
-## [VERIFIED] Phase 3: Core Professional Calculation Engine
+## [VERIFIED_SUBSET] Phase 3: Core Professional Calculation Engine
 - [x] D1/Rasi, houses, ascendant, nakshatra.
-- [x] Extended vargas, dashas, strengths, yogas, doshas, transit systems, panchanga.
+- [x] Extended vargas, dashas (Maha/Antar), strengths (Uchcha/Dig/Naisargika/Cheshta), ashtakavarga.
+- [ ] Complete Shadbala (Kala/Drik) and Pratyantar dashas.
 - [x] Driven by test fixtures and proven reproducibility.
 
 ## [VERIFIED] Phase 4: Method SDK
