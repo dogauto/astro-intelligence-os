@@ -67,7 +67,7 @@ class TransitCareerMethod(Method):
     def required_calculations(self) -> list[str]:
         return ["planets", "transit"]
 
-    def run(self, state: AstroState, question: QuestionContext) -> MethodRun:
+    def run(self, state: AstroState, question: QuestionContext, provenance_registry: Any | None = None) -> MethodRun:
         rules_evaluated: list[str] = []
         calculations_used: list[str] = ["planets", "transit"]
         intermediate_findings: list[dict[str, Any]] = []
@@ -87,7 +87,7 @@ class TransitCareerMethod(Method):
                 predictions=[
                     Prediction(
                         domain=question.domain,
-                        event=question.event,
+                        event=question.event or "transit_check",
                         is_abstention=True,
                         abstention_reason="No transit data available in AstroState.",
                     )
@@ -205,6 +205,53 @@ class TransitCareerMethod(Method):
         assumptions.append("All prediction magnitudes are purely HEURISTIC and not calibrated probabilities.")
         assumptions.append("Transit houses are calculated using whole sign houses from the natal Moon (Chandra Lagna).")
 
+        run_node_id = None
+        if provenance_registry:
+            from astro_engine.provenance import MethodRunNode, PredictionNode, RuleNode
+
+            run_node = MethodRunNode(
+                version=self.version,
+                run_id="",
+                method_id=self.method_id,
+                input_state_hash=state.state_id,
+                parent_ids=[state.provenance.astrostate_node_id] if state.provenance.astrostate_node_id else []
+            )
+            run_node.compute_hash(run_node.model_dump(exclude={"node_id", "timestamp", "content_hash", "run_id"}))
+            run_node.run_id = run_node.node_id
+            provenance_registry.add_node(run_node)
+            run_node_id = run_node.node_id
+
+            reconstructed_preds = []
+            for pred in predictions:
+                rule_nodes = []
+                for rule_id in rules_evaluated:
+                    r_node = RuleNode(
+                        version=self.version,
+                        rule_id=rule_id,
+                        logic_description=f"Rule {rule_id}",
+                        parent_ids=[run_node_id]
+                    )
+                    r_node.compute_hash(r_node.model_dump(exclude={"node_id", "timestamp", "content_hash"}))
+                    provenance_registry.add_node(r_node)
+                    rule_nodes.append(r_node.node_id)
+
+                pred_node = PredictionNode(
+                    version=self.version,
+                    prediction_id="",
+                    domain=pred.domain,
+                    event=pred.event,
+                    parent_ids=[run_node_id] + rule_nodes
+                )
+                pred_node.compute_hash(pred_node.model_dump(exclude={"node_id", "timestamp", "content_hash", "prediction_id"}))
+                pred_node.prediction_id = pred_node.node_id
+                provenance_registry.add_node(pred_node)
+
+                d = pred.model_dump()
+                d["provenance_node_id"] = pred_node.node_id
+                d["prediction_id"] = pred_node.prediction_id
+                reconstructed_preds.append(Prediction(**d))
+            predictions = reconstructed_preds
+
         return MethodRun(
             method_id=self.method_id,
             method_version=self.version,
@@ -216,9 +263,16 @@ class TransitCareerMethod(Method):
             predictions=predictions,
             assumptions=assumptions,
             warnings=warnings,
+            provenance_node_id=run_node_id,
         )
 
-    def _build_abstention(self, state, question, calc, warnings):
+    def _build_abstention(
+        self,
+        state: AstroState,
+        question: QuestionContext,
+        calc: list[str],
+        warnings: list[str],
+    ) -> MethodRun:
         return MethodRun(
             method_id=self.method_id,
             method_version=self.version,
@@ -230,7 +284,7 @@ class TransitCareerMethod(Method):
             predictions=[
                 Prediction(
                     domain=question.domain,
-                    event=question.event,
+                    event=question.event or "career_check",
                     is_abstention=True,
                     abstention_reason="Missing necessary calculations.",
                 )

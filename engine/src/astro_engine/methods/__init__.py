@@ -13,14 +13,13 @@ from __future__ import annotations
 
 import uuid
 from abc import ABC, abstractmethod
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from enum import Enum
 from typing import Any, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from astro_engine.state import AstroState
-
 
 # ---------------------------------------------------------------------------
 # Method maturity lifecycle
@@ -45,9 +44,9 @@ class QuestionContext(BaseModel):
 
     domain: str = Field(..., description="e.g. 'career', 'health', 'relationship'.")
     task: str = Field(..., description="e.g. 'event_timing', 'trend_analysis'.")
-    event: Optional[str] = Field(default=None, description="Specific event type.")
-    time_horizon_years: Optional[float] = Field(default=None)
-    raw_question: Optional[str] = Field(default=None, description="Original user question.")
+    event: str | None = Field(default=None, description="Specific event type.")
+    time_horizon_years: float | None = Field(default=None)
+    raw_question: str | None = Field(default=None, description="Original user question.")
     metadata: dict[str, Any] = Field(default_factory=dict)
 
     model_config = ConfigDict(frozen=True)
@@ -74,26 +73,29 @@ class Prediction(BaseModel):
     domain: str
     event: str
     direction: PredictionDirection = PredictionDirection.UNKNOWN
-    magnitude: Optional[float] = Field(
+    magnitude: float | None = Field(
         default=None, description="Intensity 0.0–1.0, if quantifiable."
     )
-    time_window_start: Optional[datetime] = None
-    time_window_end: Optional[datetime] = None
-    duration_description: Optional[str] = None
+    time_window_start: datetime | None = None
+    time_window_end: datetime | None = None
+    duration_description: str | None = None
     conditions: list[str] = Field(default_factory=list)
     supporting_evidence: list[str] = Field(default_factory=list)
     contradictory_evidence: list[str] = Field(default_factory=list)
     method_id: str = ""
     method_version: str = ""
-    raw_confidence: Optional[float] = Field(
+    raw_confidence: float | None = Field(
         default=None, description="Method's own confidence. NOT calibrated."
     )
     is_abstention: bool = Field(
         default=False, description="True if method cannot make a prediction."
     )
-    abstention_reason: Optional[str] = None
+    abstention_reason: str | None = None
     provenance: dict[str, Any] = Field(
         default_factory=dict, description="Traceability metadata for this specific prediction."
+    )
+    provenance_node_id: str | None = Field(
+        default=None, description="ID of the PredictionNode in the registry."
     )
 
     model_config = ConfigDict(frozen=True)
@@ -128,7 +130,10 @@ class MethodRun(BaseModel):
     predictions: list[Prediction] = Field(default_factory=list)
     assumptions: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
-    executed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    executed_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    provenance_node_id: str | None = Field(
+        default=None, description="ID of the MethodRunNode in the registry."
+    )
 
     model_config = ConfigDict(frozen=True)
 
@@ -191,7 +196,7 @@ class Method(ABC):
         ...
 
     @abstractmethod
-    def run(self, state: AstroState, question: QuestionContext) -> MethodRun:
+    def run(self, state: AstroState, question: QuestionContext, provenance_registry: Any | None = None) -> MethodRun:
         """
         Execute this methodology against the given AstroState.
 

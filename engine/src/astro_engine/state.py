@@ -12,12 +12,11 @@ no LLM outputs, and no subjective interpretations.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from astro_engine.conventions import ConventionProfile
-
 
 # ---------------------------------------------------------------------------
 # Input metadata
@@ -29,7 +28,7 @@ class BirthInput(BaseModel):
     datetime_utc: datetime = Field(
         ..., description="Birth date/time in UTC."
     )
-    datetime_local: Optional[datetime] = Field(
+    datetime_local: datetime | None = Field(
         default=None, description="Birth date/time in local timezone (for display)."
     )
     timezone_name: str = Field(
@@ -44,13 +43,13 @@ class BirthInput(BaseModel):
     altitude_m: float = Field(
         default=0.0, description="Altitude in meters."
     )
-    location_name: Optional[str] = Field(
+    location_name: str | None = Field(
         default=None, description="Human-readable location name."
     )
-    source: Optional[str] = Field(
+    source: str | None = Field(
         default=None, description="Source of the birth data (e.g. 'birth certificate')."
     )
-    rodden_rating: Optional[str] = Field(
+    rodden_rating: str | None = Field(
         default=None, description="Rodden accuracy rating (AA, A, B, C, DD, X, XX)."
     )
 
@@ -72,10 +71,10 @@ class PlanetaryStateEntry(BaseModel):
     sign_index: int
     sign_name: str
     degrees_in_sign: float
-    nakshatra_name: Optional[str] = None
-    nakshatra_index: Optional[int] = None
-    pada: Optional[int] = None
-    nakshatra_lord: Optional[str] = None
+    nakshatra_name: str | None = None
+    nakshatra_index: int | None = None
+    pada: int | None = None
+    nakshatra_lord: str | None = None
 
     model_config = ConfigDict(frozen=True)
 
@@ -90,7 +89,7 @@ class ChartState(BaseModel):
     ascendant_longitude: float
     ascendant_sign_index: int
     ascendant_sign_name: str
-    ascendant_nakshatra: Optional[str] = None
+    ascendant_nakshatra: str | None = None
     house_cusps: list[float] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
@@ -115,6 +114,12 @@ class ComputationProvenance(BaseModel):
         ..., description="Julian Day used for computation."
     )
     warnings: list[str] = Field(default_factory=list)
+    provenance_node_id: str | None = Field(
+        default=None, description="ID of the AstronomyComputationNode in the registry."
+    )
+    astrostate_node_id: str | None = Field(
+        default=None, description="ID of the AstroStateNode in the registry."
+    )
 
     model_config = ConfigDict(frozen=True)
 
@@ -145,25 +150,25 @@ class AstroState(BaseModel):
 
     # Computed sections
     planets: list[PlanetaryStateEntry] = Field(default_factory=list)
-    chart: Optional[ChartState] = None
+    chart: ChartState | None = None
 
     # Placeholder sections — will be populated as the engine grows
     # Each is typed as Optional[Any] initially to allow incremental development
-    vargas: Optional[Any] = Field(default=None, description="Divisional charts (D1-D60+).")
-    dashas: Optional[Any] = Field(default=None, description="Dasha periods.")
-    strengths: Optional[Any] = Field(default=None, description="Shadbala, Bhava Bala, etc.")
-    ashtakavarga: Optional[Any] = Field(default=None, description="Ashtakavarga tables.")
-    yogas: Optional[Any] = Field(default=None, description="Detected yogas.")
-    doshas: Optional[Any] = Field(default=None, description="Detected doshas.")
-    arudhas: Optional[Any] = Field(default=None, description="Arudha Lagnas.")
-    karakas: Optional[Any] = Field(default=None, description="Chara Karakas.")
-    sphutas: Optional[Any] = Field(default=None, description="Special sphutas.")
-    upagrahas: Optional[Any] = Field(default=None, description="Sub-planets.")
-    special_lagnas: Optional[Any] = Field(default=None, description="Hora Lagna, Ghati Lagna, etc.")
-    transit: Optional[Any] = Field(default=None, description="Current gochara.")
-    panchanga: Optional[Any] = Field(default=None, description="Tithi, Yoga, Karana, etc.")
-    muhurta: Optional[Any] = Field(default=None, description="Muhurta data.")
-    matching: Optional[Any] = Field(default=None, description="Compatibility/matching data.")
+    vargas: Any | None = Field(default=None, description="Divisional charts (D1-D60+).")
+    dashas: Any | None = Field(default=None, description="Dasha periods.")
+    strengths: Any | None = Field(default=None, description="Shadbala, Bhava Bala, etc.")
+    ashtakavarga: Any | None = Field(default=None, description="Ashtakavarga tables.")
+    yogas: Any | None = Field(default=None, description="Detected yogas.")
+    doshas: Any | None = Field(default=None, description="Detected doshas.")
+    arudhas: Any | None = Field(default=None, description="Arudha Lagnas.")
+    karakas: Any | None = Field(default=None, description="Chara Karakas.")
+    sphutas: Any | None = Field(default=None, description="Special sphutas.")
+    upagrahas: Any | None = Field(default=None, description="Sub-planets.")
+    special_lagnas: Any | None = Field(default=None, description="Hora Lagna, Ghati Lagna, etc.")
+    transit: Any | None = Field(default=None, description="Current gochara.")
+    panchanga: Any | None = Field(default=None, description="Tithi, Yoga, Karana, etc.")
+    muhurta: Any | None = Field(default=None, description="Muhurta data.")
+    matching: Any | None = Field(default=None, description="Compatibility/matching data.")
 
     # Provenance
     provenance: ComputationProvenance

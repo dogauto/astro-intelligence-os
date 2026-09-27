@@ -18,8 +18,10 @@ Phase 2-3 additions:
 
 from __future__ import annotations
 
-import uuid
-from datetime import datetime, timezone
+import hashlib
+import json
+from datetime import UTC, datetime
+from typing import Any
 
 from astro_engine import __version__
 from astro_engine.ashtakavarga import compute_ashtakavarga
@@ -33,6 +35,13 @@ from astro_engine.astronomy import (
 from astro_engine.conventions import ConventionProfile
 from astro_engine.dasha import compute_vimshottari_dasha
 from astro_engine.nakshatra import compute_nakshatra
+from astro_engine.provenance import (
+    AstronomyComputationNode,
+    AstroStateNode,
+    BirthInputNode,
+    ConventionProfileNode,
+    ProvenanceRegistry,
+)
 from astro_engine.shadbala import compute_shadbala
 from astro_engine.state import (
     AstroState,
@@ -41,7 +50,7 @@ from astro_engine.state import (
     ComputationProvenance,
     PlanetaryStateEntry,
 )
-from astro_engine.vargas import VargaType, compute_all_vargas
+from astro_engine.vargas import compute_all_vargas
 
 
 class AstroStateBuilder:
@@ -54,7 +63,8 @@ class AstroStateBuilder:
         self,
         birth_input: BirthInput,
         convention: ConventionProfile,
-        transit_datetime: Optional[datetime] = None,
+        transit_datetime: datetime | None = None,
+        provenance_registry: ProvenanceRegistry | None = None,
     ) -> AstroState:
         """
         Compute a full AstroState.
@@ -168,10 +178,11 @@ class AstroStateBuilder:
             Planet.MERCURY, Planet.JUPITER, Planet.VENUS, Planet.SATURN,
         ]
         for planet in shadbala_planets:
-            pos = planet_positions.get(planet)
-            if pos:
-                sb = compute_shadbala(planet, pos, ascendant)
-                strengths_data[PLANET_NAMES[planet]] = {
+            p_pos = planet_positions.get(planet)
+            if p_pos is None:
+                continue
+            sb = compute_shadbala(planet, p_pos, ascendant)
+            strengths_data[PLANET_NAMES[planet]] = {
                     "uchcha_bala": round(sb.uchcha_bala, 2),
                     "dig_bala": round(sb.dig_bala, 2),
                     "naisargika_bala": round(sb.naisargika_bala, 2),
@@ -196,7 +207,7 @@ class AstroStateBuilder:
         }
 
         # --- Transit (Gochara) ---
-        transit_data: Optional[dict[str, Any]] = None
+        transit_data: dict[str, Any] | None = None
         if transit_datetime is not None:
             t_jd = datetime_to_jd(transit_datetime)
             t_planets = self._engine.compute_all_planets(t_jd, convention)
@@ -217,17 +228,88 @@ class AstroStateBuilder:
                 "planets": t_entries,
             }
 
+        # Derive state_id deterministically from the computed content so that
+        # two identical inputs produce an identical state_id (and therefore
+        # identical downstream provenance hashes). The provenance block is
+        # excluded because it contains non-deterministic metadata (computed_at).
+        state_payload = {
+            "engine_version": __version__,
+            "input": birth_input.model_dump(mode="json"),
+            "convention": convention.model_dump(mode="json"),
+            "planets": [p.model_dump(mode="json") for p in planet_entries],
+            "chart": chart.model_dump(mode="json") if chart else None,
+            "vargas": vargas_data,
+            "dashas": dasha_data,
+            "strengths": strengths_data,
+            "ashtakavarga": ashtakavarga_data,
+            "transit": transit_data,
+        }
+        state_id = hashlib.sha256(
+            json.dumps(state_payload, sort_keys=True, default=str).encode("utf-8")
+        ).hexdigest()
+
         # --- Provenance ---
+        astronomy_node_id = None
+        astrostate_node_id = None
+        if provenance_registry:
+            birth_node = BirthInputNode(
+                version="1.0",
+                datetime_utc=birth_input.datetime_utc.isoformat(),
+                latitude=birth_input.latitude,
+                longitude=birth_input.longitude,
+            )
+            birth_node.content_hash = birth_node.compute_hash(birth_node._content_dict())
+            provenance_registry.add_node(birth_node)
+
+            conv_node = ConventionProfileNode(
+                version="1.0",
+                convention_id=convention.id,
+                ayanamsa=convention.ayanamsa.value,
+                house_system=convention.house_system.value,
+            )
+            conv_node.content_hash = conv_node.compute_hash(conv_node._content_dict())
+            provenance_registry.add_node(conv_node)
+
+            astronomy_node = AstronomyComputationNode(
+                version=__version__,
+                parent_ids=[birth_node.node_id, conv_node.node_id],
+                engine_version=__version__,
+                ephemeris_source="moshier" if not self._engine._ephemeris_path else "swiss",
+                ephemeris_version="unknown",
+            )
+            astronomy_node.content_hash = astronomy_node.compute_hash(astronomy_node.model_dump(exclude={"node_id", "timestamp", "content_hash"}))
+            provenance_registry.add_node(astronomy_node)
+            astronomy_node_id = astronomy_node.node_id
+
+            # Register AstroState node — must happen BEFORE ComputationProvenance
+            # so that the state_id and node_id are both known.
+            astrostate_node = AstroStateNode(
+                version=__version__,
+                state_id=state_id,
+                engine_version=__version__,
+                ephemeris_type="moshier" if not self._engine._ephemeris_path else "swiss",
+                ayanamsa_value=ayanamsa_value,
+                julian_day=jd,
+                parent_ids=[astronomy_node_id] if astronomy_node_id else [],
+            )
+            astrostate_node.content_hash = astrostate_node.compute_hash(
+                astrostate_node.model_dump(exclude={"node_id", "timestamp", "content_hash"})
+            )
+            provenance_registry.add_node(astrostate_node)
+            astrostate_node_id = astrostate_node.node_id
+
         provenance = ComputationProvenance(
             engine_version=__version__,
-            computed_at=datetime.now(timezone.utc),
+            computed_at=datetime.now(UTC),
             ephemeris_type="moshier" if not self._engine._ephemeris_path else "swiss",
             ayanamsa_value=ayanamsa_value,
             julian_day=jd,
+            provenance_node_id=astronomy_node_id,
+            astrostate_node_id=astrostate_node_id,
         )
 
         return AstroState(
-            state_id=str(uuid.uuid4()),
+            state_id=state_id,
             input=birth_input,
             convention=convention,
             planets=planet_entries,

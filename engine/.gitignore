@@ -1,0 +1,36 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Pytest
+.pytest_cache/
+
+# Coverage
+.coverage
+engine/.coverage
+htmlcov/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Mac
+.DS_Store
+
+# Engine build artifacts
+src/astro_engine.egg-info/
+*.egg
+
+# Claude flow
+.claude-flow/
+
+# Generated artifacts
+astro
