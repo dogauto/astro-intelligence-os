@@ -20,7 +20,10 @@ Maturity: EXPERIMENTAL
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from astro_engine.state import AstroState
 
 from astro_engine.methods import (
     Method,
@@ -28,9 +31,8 @@ from astro_engine.methods import (
     MethodRun,
     Prediction,
     PredictionDirection,
-    QuestionContext,
+    QuestionSpec,
 )
-from astro_engine.state import AstroState
 
 
 class TransitCareerMethod(Method):
@@ -67,7 +69,19 @@ class TransitCareerMethod(Method):
     def required_calculations(self) -> list[str]:
         return ["planets", "transit"]
 
-    def run(self, state: AstroState, question: QuestionContext, provenance_registry: Any | None = None) -> MethodRun:
+    def run(
+        self,
+        state: AstroState,
+        question: QuestionSpec,
+        provenance_registry: Any | None = None,
+    ) -> MethodRun:
+        # Extract question attributes from the canonical QuestionSpec
+        q_domain = question.domain or "career"
+        q_event = (
+            question.event_type or "transit_check"
+        )
+        q_question_id = question.question_id
+
         rules_evaluated: list[str] = []
         calculations_used: list[str] = ["planets", "transit"]
         intermediate_findings: list[dict[str, Any]] = []
@@ -76,36 +90,99 @@ class TransitCareerMethod(Method):
         warnings: list[str] = []
 
         if not state.transit:
+            abstention_predictions: list[Prediction] = []
+            run_node_id: str | None = None
+            if provenance_registry:
+                from astro_engine.provenance import MethodRunNode, PredictionNode, RuleNode
+
+                run_node = MethodRunNode(
+                    version=self.version,
+                    run_id="",
+                    method_id=self.method_id,
+                    input_state_hash=state.state_id,
+                    parent_ids=[
+                        state.provenance.astrostate_node_id
+                    ] if state.provenance.astrostate_node_id else []
+                )
+                run_node.compute_hash(
+                    run_node.model_dump(exclude={"node_id", "timestamp", "content_hash", "run_id"})
+                )
+                run_node.run_id = run_node.node_id
+                provenance_registry.add_node(run_node)
+                run_node_id = run_node.node_id
+
+                pred_node = PredictionNode(
+                    version=self.version,
+                    prediction_id="",
+                    domain=q_domain,
+                    event=q_event or "transit_check",
+                    question_id=q_question_id,
+                    parent_ids=[run_node_id]
+                )
+                pred_node.compute_hash(
+                    pred_node.model_dump(
+                        exclude={"node_id", "timestamp", "content_hash", "prediction_id"}
+                    )
+                )
+                pred_node.prediction_id = pred_node.node_id
+                provenance_registry.add_node(pred_node)
+
+                p = Prediction(
+                    domain=q_domain,
+                    event=q_event or "transit_check",
+                    direction=PredictionDirection.UNKNOWN,
+                    is_abstention=True,
+                    abstention_reason="No transit data available in AstroState.",
+                    method_id=self.method_id,
+                    method_version=self.version,
+                    question_id=q_question_id,
+                )
+                d = p.model_dump()
+                d["provenance_node_id"] = pred_node.node_id
+                d["prediction_id"] = pred_node.prediction_id
+                abstention_predictions.append(Prediction(**d))
+            else:
+                abstention_predictions.append(
+                    Prediction(
+                        domain=q_domain,
+                        event=q_event or "transit_check",
+                        direction=PredictionDirection.UNKNOWN,
+                        is_abstention=True,
+                        abstention_reason="No transit data available in AstroState.",
+                        method_id=self.method_id,
+                        method_version=self.version,
+                        question_id=q_question_id,
+                    )
+                )
+
             return MethodRun(
                 method_id=self.method_id,
                 method_version=self.version,
                 input_state_id=state.state_id,
+                input_state_hash=state.state_id,
+                question_id=q_question_id,
                 question=question,
                 rules_evaluated=[],
                 calculations_used=calculations_used,
                 intermediate_findings=[],
-                predictions=[
-                    Prediction(
-                        domain=question.domain,
-                        event=question.event or "transit_check",
-                        is_abstention=True,
-                        abstention_reason="No transit data available in AstroState.",
-                    )
-                ],
+                predictions=abstention_predictions,
                 assumptions=["Requires transit positions computed in AstroState."],
                 warnings=["Transit data missing, abstaining."],
+                provenance_node_id=run_node_id,
             )
 
         # Find natal Moon sign
         natal_moon_sign = None
-        for p in state.planets:
-            if p.planet == "Moon":
-                natal_moon_sign = p.sign_index
+        for planet in state.planets:
+            if planet.planet == "Moon":
+                natal_moon_sign = planet.sign_index
                 break
 
         if natal_moon_sign is None:
             warnings.append("Natal Moon not found.")
-            return self._build_abstention(state, question, calculations_used, warnings)
+            return self._build_abstention(
+                state, question, calculations_used, warnings, q_domain, q_event
+            )
 
         intermediate_findings.append({
             "finding": "natal_moon_sign",
@@ -132,12 +209,17 @@ class TransitCareerMethod(Method):
                         event="career_growth",
                         direction=PredictionDirection.POSITIVE,
                         magnitude=0.7, # HEURISTIC
-                        duration_description=f"Current Jupiter transit in house {house_from_moon} from Moon",
+                        duration_description=(
+                            f"Current Jupiter transit in house {house_from_moon} from Moon"
+                        ),
                         conditions=["Jupiter transiting auspicious house from natal Moon"],
-                        supporting_evidence=[f"Jupiter in sign {t_sign}, {house_from_moon}th from Moon"],
+                        supporting_evidence=[
+                            f"Jupiter in sign {t_sign}, {house_from_moon}th from Moon"
+                        ],
                         method_id=self.method_id,
                         method_version=self.version,
-                        provenance={"transit_datetime": transit_date},
+                        question_id=q_question_id,
+                    provenance={"transit_datetime": transit_date},
                     ))
                 elif house_from_moon == 10:
                     rules_evaluated.append("jupiter_transit_10_from_moon")
@@ -147,11 +229,15 @@ class TransitCareerMethod(Method):
                         direction=PredictionDirection.MIXED,
                         magnitude=0.6, # HEURISTIC
                         duration_description="Current Jupiter transit in 10th from Moon",
-                        conditions=["Jupiter transiting 10th house from natal Moon (traditionally brings changes or loss of status)"],
+                        conditions=[
+                            "Jupiter transiting 10th house from natal Moon"
+                            " (traditionally brings changes or loss of status)"
+                        ],
                         supporting_evidence=[f"Jupiter in sign {t_sign}, 10th from Moon"],
                         method_id=self.method_id,
                         method_version=self.version,
-                        provenance={"transit_datetime": transit_date},
+                        question_id=q_question_id,
+                    provenance={"transit_datetime": transit_date},
                     ))
 
             # Rules 2 & 3: Saturn transits
@@ -164,11 +250,15 @@ class TransitCareerMethod(Method):
                         direction=PredictionDirection.MIXED,
                         magnitude=0.8, # HEURISTIC
                         duration_description="Current Saturn transit in 10th from Moon",
-                        conditions=["Saturn transiting 10th house from natal Moon (intense pressure, hard work, restructuring)"],
+                        conditions=[
+                            "Saturn transiting 10th house from natal Moon"
+                            " (intense pressure, hard work, restructuring)"
+                        ],
                         supporting_evidence=[f"Saturn in sign {t_sign}, 10th from Moon"],
                         method_id=self.method_id,
                         method_version=self.version,
-                        provenance={"transit_datetime": transit_date},
+                        question_id=q_question_id,
+                    provenance={"transit_datetime": transit_date},
                     ))
                 elif house_from_moon in [12, 1, 2]:
                     rules_evaluated.append("saturn_sade_sati")
@@ -178,16 +268,19 @@ class TransitCareerMethod(Method):
                         direction=PredictionDirection.MIXED,
                         magnitude=0.9, # HEURISTIC
                         duration_description="Current Sade Sati phase",
-                        conditions=[f"Saturn transiting {house_from_moon}th house from natal Moon (Sade Sati)"],
+                        conditions=[
+                            f"Saturn transiting {house_from_moon}th house from natal Moon"
+                            " (Sade Sati)"
+                        ],
                         supporting_evidence=[f"Saturn in sign {t_sign}, near natal Moon"],
                         method_id=self.method_id,
                         method_version=self.version,
-                        provenance={"transit_datetime": transit_date},
+                        question_id=q_question_id,
+                    provenance={"transit_datetime": transit_date},
                     ))
 
             # Rule 4: Rahu transit
-            if planet == "Rahu":
-                if house_from_moon == 10:
+            if planet == "Rahu" and house_from_moon == 10:
                     rules_evaluated.append("rahu_transit_10_from_moon")
                     predictions.append(Prediction(
                         domain="career",
@@ -195,15 +288,24 @@ class TransitCareerMethod(Method):
                         direction=PredictionDirection.POSITIVE,
                         magnitude=0.7, # HEURISTIC
                         duration_description="Current Rahu transit in 10th from Moon",
-                        conditions=["Rahu transiting 10th house from natal Moon (ambition, sudden changes, foreign links)"],
+                        conditions=[
+                            "Rahu transiting 10th house from natal Moon"
+                            " (ambition, sudden changes, foreign links)"
+                        ],
                         supporting_evidence=[f"Rahu in sign {t_sign}, 10th from Moon"],
                         method_id=self.method_id,
                         method_version=self.version,
-                        provenance={"transit_datetime": transit_date},
+                        question_id=q_question_id,
+                    provenance={"transit_datetime": transit_date},
                     ))
 
-        assumptions.append("All prediction magnitudes are purely HEURISTIC and not calibrated probabilities.")
-        assumptions.append("Transit houses are calculated using whole sign houses from the natal Moon (Chandra Lagna).")
+        assumptions.append(
+            "All prediction magnitudes are purely HEURISTIC and not calibrated probabilities."
+        )
+        assumptions.append(
+            "Transit houses are calculated using whole sign houses"
+            " from the natal Moon (Chandra Lagna)."
+        )
 
         run_node_id = None
         if provenance_registry:
@@ -214,9 +316,13 @@ class TransitCareerMethod(Method):
                 run_id="",
                 method_id=self.method_id,
                 input_state_hash=state.state_id,
-                parent_ids=[state.provenance.astrostate_node_id] if state.provenance.astrostate_node_id else []
+                parent_ids=[
+                    state.provenance.astrostate_node_id
+                ] if state.provenance.astrostate_node_id else []
             )
-            run_node.compute_hash(run_node.model_dump(exclude={"node_id", "timestamp", "content_hash", "run_id"}))
+            run_node.compute_hash(
+                run_node.model_dump(exclude={"node_id", "timestamp", "content_hash", "run_id"})
+            )
             run_node.run_id = run_node.node_id
             provenance_registry.add_node(run_node)
             run_node_id = run_node.node_id
@@ -231,7 +337,9 @@ class TransitCareerMethod(Method):
                         logic_description=f"Rule {rule_id}",
                         parent_ids=[run_node_id]
                     )
-                    r_node.compute_hash(r_node.model_dump(exclude={"node_id", "timestamp", "content_hash"}))
+                    r_node.compute_hash(
+                        r_node.model_dump(exclude={"node_id", "timestamp", "content_hash"})
+                    )
                     provenance_registry.add_node(r_node)
                     rule_nodes.append(r_node.node_id)
 
@@ -240,9 +348,14 @@ class TransitCareerMethod(Method):
                     prediction_id="",
                     domain=pred.domain,
                     event=pred.event,
+                    question_id=question.question_id,
                     parent_ids=[run_node_id] + rule_nodes
                 )
-                pred_node.compute_hash(pred_node.model_dump(exclude={"node_id", "timestamp", "content_hash", "prediction_id"}))
+                pred_node.compute_hash(
+                    pred_node.model_dump(
+                        exclude={"node_id", "timestamp", "content_hash", "prediction_id"}
+                    )
+                )
                 pred_node.prediction_id = pred_node.node_id
                 provenance_registry.add_node(pred_node)
 
@@ -256,6 +369,8 @@ class TransitCareerMethod(Method):
             method_id=self.method_id,
             method_version=self.version,
             input_state_id=state.state_id,
+            input_state_hash=state.state_id,
+            question_id=q_question_id,
             question=question,
             rules_evaluated=rules_evaluated,
             calculations_used=calculations_used,
@@ -269,24 +384,32 @@ class TransitCareerMethod(Method):
     def _build_abstention(
         self,
         state: AstroState,
-        question: QuestionContext,
+        question: QuestionSpec,
         calc: list[str],
         warnings: list[str],
+        q_domain: str | None = None,
+        q_event: str | None = None,
     ) -> MethodRun:
         return MethodRun(
             method_id=self.method_id,
             method_version=self.version,
             input_state_id=state.state_id,
+            input_state_hash=state.state_id,
+            question_id=question.question_id,
             question=question,
             rules_evaluated=[],
             calculations_used=calc,
             intermediate_findings=[],
             predictions=[
                 Prediction(
-                    domain=question.domain,
-                    event=question.event or "career_check",
+                    domain=q_domain or "career_check",
+                    event=q_event or "career_check",
+                    direction=PredictionDirection.UNKNOWN,
                     is_abstention=True,
                     abstention_reason="Missing necessary calculations.",
+                    method_id=self.method_id,
+                    method_version=self.version,
+                    question_id=question.question_id,
                 )
             ],
             assumptions=[],

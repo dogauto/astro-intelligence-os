@@ -16,16 +16,13 @@ ALL outputs are purely mathematical. No astrological interpretation happens here
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import IntEnum
-from typing import Optional
 
 import swisseph as swe
 
 from astro_engine.conventions import AyanamsaType, ConventionProfile, NodeType
-
 
 # ---------------------------------------------------------------------------
 # Planet identifiers — maps to Swiss Ephemeris constants
@@ -146,7 +143,7 @@ def datetime_to_jd(dt: datetime) -> float:
             "datetime must be timezone-aware. "
             "Naive datetimes are rejected to prevent silent timezone errors."
         )
-    utc_dt = dt.astimezone(timezone.utc)
+    utc_dt = dt.astimezone(UTC)
     hour_decimal = (
         utc_dt.hour
         + utc_dt.minute / 60.0
@@ -154,7 +151,7 @@ def datetime_to_jd(dt: datetime) -> float:
         + utc_dt.microsecond / 3_600_000_000.0
     )
     jd = swe.julday(utc_dt.year, utc_dt.month, utc_dt.day, hour_decimal)
-    return jd
+    return float(jd)
 
 
 def jd_to_datetime(jd: float) -> datetime:
@@ -166,7 +163,7 @@ def jd_to_datetime(jd: float) -> datetime:
     seconds = (remainder - minutes) * 60
     whole_seconds = int(seconds)
     microseconds = int((seconds - whole_seconds) * 1_000_000)
-    return datetime(year, month, day, hours, minutes, whole_seconds, microseconds, tzinfo=timezone.utc)
+    return datetime(year, month, day, hours, minutes, whole_seconds, microseconds, tzinfo=UTC)
 
 
 # ---------------------------------------------------------------------------
@@ -180,7 +177,7 @@ class AstronomyEngine:
     All methods require an explicit ConventionProfile to ensure reproducibility.
     """
 
-    def __init__(self, ephemeris_path: Optional[str] = None) -> None:
+    def __init__(self, ephemeris_path: str | None = None) -> None:
         """
         Initialize the engine.
 
@@ -204,7 +201,7 @@ class AstronomyEngine:
             if ayan_code is not None:
                 swe.set_sid_mode(ayan_code)
 
-        return flags
+        return int(flags)
 
     def get_ayanamsa(self, jd: float, convention: ConventionProfile) -> float:
         """
@@ -220,7 +217,7 @@ class AstronomyEngine:
             raise ValueError(f"Unsupported ayanamsa: {convention.ayanamsa}")
 
         swe.set_sid_mode(ayan_code)
-        return swe.get_ayanamsa_ut(jd)
+        return float(swe.get_ayanamsa_ut(jd))
 
     def compute_planet(
         self,

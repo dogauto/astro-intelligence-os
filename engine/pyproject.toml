@@ -26,6 +26,9 @@ dev = [
     "mypy>=1.10.0",
 ]
 
+[project.scripts]
+astro = "astro_cli.main:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
@@ -41,6 +44,14 @@ python_version = "3.11"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = "swisseph.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+ignore_errors = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

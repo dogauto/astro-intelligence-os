@@ -2,12 +2,10 @@
 Tests for the Shadbala module.
 """
 
-import pytest
 
 from astro_engine.astronomy import Planet, PlanetPosition
 from astro_engine.shadbala import (
     EXALTATION_POINTS,
-    MINIMUM_SHADBALA_RUPAS,
     NAISARGIKA_BALA,
     compute_cheshta_bala,
     compute_dig_bala,

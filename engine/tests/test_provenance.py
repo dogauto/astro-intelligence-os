@@ -5,7 +5,7 @@ import pytest
 from astro_engine.astronomy import AstronomyEngine
 from astro_engine.builder import AstroStateBuilder
 from astro_engine.conventions import AyanamsaType, ConventionProfile, HouseSystem
-from astro_engine.methods import QuestionContext
+from astro_engine.methods import QuestionSpec
 from astro_engine.methods.vimshottari_career import VimshottariCareerMethod
 from astro_engine.provenance import (
     ProvenanceIntegrityError,
@@ -16,11 +16,11 @@ from astro_engine.state import BirthInput
 
 
 @pytest.fixture
-def provenance_registry():
+def provenance_registry() -> ProvenanceRegistry:
     return ProvenanceRegistry()
 
 @pytest.fixture
-def birth_input():
+def birth_input() -> BirthInput:
     return BirthInput(
         datetime_utc=datetime(1990, 1, 1, 12, 0, tzinfo=UTC),
         timezone_name="UTC",
@@ -29,7 +29,7 @@ def birth_input():
     )
 
 @pytest.fixture
-def convention():
+def convention() -> None:
     return ConventionProfile(
         id="test-profile",
         name="Test Profile",
@@ -38,13 +38,21 @@ def convention():
     )
 
 @pytest.fixture
-def test_state_and_prediction(birth_input, convention, provenance_registry):
+def test_state_and_prediction(
+    birth_input: BirthInput,
+    convention: ConventionProfile,
+    provenance_registry: ProvenanceRegistry,
+) -> None:
     engine = AstronomyEngine()
     builder = AstroStateBuilder(engine)
     state = builder.build(birth_input, convention, provenance_registry=provenance_registry)
 
     method = VimshottariCareerMethod()
-    question = QuestionContext(domain="career", task="event_timing")
+    question = QuestionSpec(
+        question_id="gandhi-career-event-timing",
+        domain="career",
+        event_type="event_timing",
+    )
     method_run = method.run(state, question, provenance_registry=provenance_registry)
 
     # Asserting basic requirements
@@ -55,7 +63,7 @@ def test_state_and_prediction(birth_input, convention, provenance_registry):
 
     return state, method_run, prediction
 
-def test_full_provenance_trace(test_state_and_prediction, provenance_registry):
+def test_full_provenance_trace(test_state_and_prediction, provenance_registry) -> None:
     """Test tracing a prediction back to BirthInput."""
     state, method_run, prediction = test_state_and_prediction
 
@@ -70,17 +78,16 @@ def test_full_provenance_trace(test_state_and_prediction, provenance_registry):
     assert "CONVENTION_PROFILE" in node_types
     assert "BIRTH_INPUT" in node_types
 
-def test_missing_prediction(provenance_registry):
+def test_missing_prediction(provenance_registry) -> None:
     with pytest.raises(ProvenanceIntegrityError):
         provenance_registry.trace_prediction("non-existent-id")
 
-def test_broken_dependency_id(test_state_and_prediction, provenance_registry):
+def test_broken_dependency_id(test_state_and_prediction, provenance_registry) -> None:
     """Test tracing fails if a parent ID is missing from the registry."""
     state, method_run, prediction = test_state_and_prediction
 
     # Get a node and intentionally mess up its parent ID
     pred_node = provenance_registry.get_node(prediction.provenance_node_id)
-    original_hash = pred_node.content_hash
     pred_node.parent_ids.append("fake-broken-id")
     # Recompute hash to reflect modified content
     pred_node.content_hash = pred_node.compute_hash(pred_node._content_dict())
@@ -88,7 +95,7 @@ def test_broken_dependency_id(test_state_and_prediction, provenance_registry):
     with pytest.raises(ProvenanceIntegrityError, match="Missing provenance node: fake-broken-id"):
         provenance_registry.trace_prediction(prediction.provenance_node_id)
 
-def test_modified_state_hash(test_state_and_prediction, provenance_registry):
+def test_modified_state_hash(test_state_and_prediction, provenance_registry) -> None:
     """Test that modifying node content changes the deterministic hash."""
     state, method_run, prediction = test_state_and_prediction
 
@@ -102,7 +109,7 @@ def test_modified_state_hash(test_state_and_prediction, provenance_registry):
 
     assert original_hash != new_hash
 
-def test_determinism(birth_input, convention):
+def test_determinism(birth_input, convention) -> None:
     """Test that two runs with the exact same input produce the exact same hashes."""
     registry_a = ProvenanceRegistry()
     registry_b = ProvenanceRegistry()
@@ -114,7 +121,11 @@ def test_determinism(birth_input, convention):
     state_b = builder.build(birth_input, convention, provenance_registry=registry_b)
 
     method = VimshottariCareerMethod()
-    question = QuestionContext(domain="career", task="event_timing")
+    question = QuestionSpec(
+        question_id="gandhi-career-event-timing",
+        domain="career",
+        event_type="event_timing",
+    )
 
     run_a = method.run(state_a, question, provenance_registry=registry_a)
     run_b = method.run(state_b, question, provenance_registry=registry_b)
@@ -125,12 +136,16 @@ def test_determinism(birth_input, convention):
     # Hashes of identical predictions generated at different times must match exactly
     assert pred_node_a.content_hash == pred_node_b.content_hash
 
-def test_provenance_does_not_alter_astrology(birth_input, convention):
+def test_provenance_does_not_alter_astrology(birth_input, convention) -> None:
     """Test that running with and without provenance registry yields identical predictions."""
     engine = AstronomyEngine()
     builder = AstroStateBuilder(engine)
     method = VimshottariCareerMethod()
-    question = QuestionContext(domain="career", task="event_timing")
+    question = QuestionSpec(
+        question_id="gandhi-career-event-timing",
+        domain="career",
+        event_type="event_timing",
+    )
 
     # Run without provenance
     state_clean = builder.build(birth_input, convention)
@@ -143,7 +158,7 @@ def test_provenance_does_not_alter_astrology(birth_input, convention):
 
     # Validate the predictions list is identical, except for provenance metadata
     assert len(run_clean.predictions) == len(run_prov.predictions)
-    for p_clean, p_prov in zip(run_clean.predictions, run_prov.predictions):
+    for p_clean, p_prov in zip(run_clean.predictions, run_prov.predictions, strict=True):
         assert p_clean.domain == p_prov.domain
         assert p_clean.event == p_prov.event
         assert p_clean.magnitude == p_prov.magnitude
@@ -153,7 +168,7 @@ def test_provenance_does_not_alter_astrology(birth_input, convention):
     assert run_prov.predictions[0].provenance_node_id is not None
 
 
-def test_astorstate_node_registered(test_state_and_prediction, provenance_registry):
+def test_astorstate_node_registered(test_state_and_prediction, provenance_registry) -> None:
     """Test that AstroStateNode is registered in the provenance graph."""
     state, method_run, prediction = test_state_and_prediction
 
@@ -162,7 +177,7 @@ def test_astorstate_node_registered(test_state_and_prediction, provenance_regist
     assert ProvenanceNodeType.ASTROSTATE in node_types
 
 
-def test_astorstate_node_state_id_matches(test_state_and_prediction, provenance_registry):
+def test_astorstate_node_state_id_matches(test_state_and_prediction, provenance_registry) -> None:
     """Test that AstroStateNode.state_id equals the actual AstroState.state_id."""
     state, method_run, prediction = test_state_and_prediction
 
@@ -171,7 +186,7 @@ def test_astorstate_node_state_id_matches(test_state_and_prediction, provenance_
     assert astrostate_node.state_id == state.state_id
 
 
-def test_trace_reaches_astorstate_node(test_state_and_prediction, provenance_registry):
+def test_trace_reaches_astorstate_node(test_state_and_prediction, provenance_registry) -> None:
     """Test that trace_prediction reaches the AstroStateNode."""
     state, method_run, prediction = test_state_and_prediction
 
@@ -185,10 +200,15 @@ def test_trace_reaches_astorstate_node(test_state_and_prediction, provenance_reg
     # The parent should be the AstronomyComputation node
     parent_id = astrostate_node.parent_ids[0]
     parent_node = provenance_registry.get_node(parent_id)
-    assert parent_node.node_type == ProvenanceNodeType.ASTRONOMY_COMPUTATION
+    assert parent_node.node_type == ProvenanceNodeType.CALCULATION
+
+    # And the CalculationNode's parent should be AstronomyComputation
+    calc_parent_id = parent_node.parent_ids[0]
+    calc_parent_node = provenance_registry.get_node(calc_parent_id)
+    assert calc_parent_node.node_type == ProvenanceNodeType.ASTRONOMY_COMPUTATION
 
 
-def test_identical_inputs_produce_identical_provenance(birth_input, convention):
+def test_identical_inputs_produce_identical_provenance(birth_input, convention) -> None:
     """Test that identical inputs produce identical AstroState and provenance identity."""
     registry_a = ProvenanceRegistry()
     registry_b = ProvenanceRegistry()
@@ -212,7 +232,7 @@ def test_identical_inputs_produce_identical_provenance(birth_input, convention):
     assert astrostate_a.state_id == astrostate_b.state_id
 
 
-def test_changed_birth_input_produces_different_identity(birth_input, convention):
+def test_changed_birth_input_produces_different_identity(birth_input, convention) -> None:
     """Test that changed birth input produces a different AstroState identity."""
     registry_a = ProvenanceRegistry()
     registry_b = ProvenanceRegistry()
@@ -235,7 +255,7 @@ def test_changed_birth_input_produces_different_identity(birth_input, convention
     assert state_a.state_id != state_b.state_id
 
 
-def test_missing_astorstate_link_raises(birth_input, convention, provenance_registry):
+def test_missing_astorstate_link_raises(birth_input, convention, provenance_registry) -> None:
     """Test that missing AstroState link raises ProvenanceIntegrityError."""
     engine = AstronomyEngine()
     builder = AstroStateBuilder(engine)
@@ -243,25 +263,34 @@ def test_missing_astorstate_link_raises(birth_input, convention, provenance_regi
 
     # Get the AstroStateNode and add a fake parent ID
     astrostate_node = next(
-        n for n in provenance_registry._nodes.values() if n.node_type == ProvenanceNodeType.ASTROSTATE
+        n for n in provenance_registry._nodes.values()
+        if n.node_type == ProvenanceNodeType.ASTROSTATE
     )
     astrostate_node.parent_ids.append("fake-missing-parent")
     # Recompute hash to reflect modified content
-    astrostate_node.content_hash = astrostate_node.compute_hash(astrostate_node.model_dump(exclude={"node_id", "timestamp", "content_hash"}))
+    astrostate_node.content_hash = astrostate_node.compute_hash(
+        astrostate_node.model_dump(exclude={"node_id", "timestamp", "content_hash"})
+    )
 
     # Now trace from any descendant should fail
-    from astro_engine.methods import QuestionContext
+    from astro_engine.methods import QuestionSpec
     from astro_engine.methods.vimshottari_career import VimshottariCareerMethod
 
     method = VimshottariCareerMethod()
-    question = QuestionContext(domain="career", task="event_timing")
+    question = QuestionSpec(
+        question_id="gandhi-career-event-timing",
+        domain="career",
+        event_type="event_timing",
+    )
     method_run = method.run(state, question, provenance_registry=provenance_registry)
 
-    with pytest.raises(ProvenanceIntegrityError, match="Missing provenance node: fake-missing-parent"):
+    with pytest.raises(
+        ProvenanceIntegrityError, match="Missing provenance node: fake-missing-parent"
+    ):
         provenance_registry.trace_prediction(method_run.predictions[0].provenance_node_id)
 
 
-def test_duplicate_node_raises(provenance_registry):
+def test_duplicate_node_raises(provenance_registry) -> None:
     """Test that adding a node with same ID but different content raises error."""
     from astro_engine.provenance import BirthInputNode
 
@@ -287,11 +316,13 @@ def test_duplicate_node_raises(provenance_registry):
     node2.node_id = node1.node_id
     node2.content_hash = "different_hash"
 
-    with pytest.raises(ProvenanceIntegrityError, match="Duplicate node ID with different content hash"):
+    with pytest.raises(
+        ProvenanceIntegrityError, match="Duplicate node ID with different content hash"
+    ):
         provenance_registry.add_node(node2)
 
 
-def test_cycle_detection(provenance_registry):
+def test_cycle_detection(provenance_registry) -> None:
     """Test that a cycle in the provenance graph raises ProvenanceIntegrityError."""
     from astro_engine.provenance import (
         BirthInputNode,
@@ -332,7 +363,7 @@ def test_cycle_detection(provenance_registry):
         provenance_registry.trace_prediction(node_a.node_id)
 
 
-def test_corrupted_node_hash_raises(birth_input, convention, provenance_registry):
+def test_corrupted_node_hash_raises(birth_input, convention, provenance_registry) -> None:
     """Test that a node with corrupted content hash raises ProvenanceIntegrityError."""
     from astro_engine.provenance import BirthInputNode
 
@@ -343,11 +374,15 @@ def test_corrupted_node_hash_raises(birth_input, convention, provenance_registry
         latitude=10.0,
         longitude=20.0,
     )
-    node.content_hash = node.compute_hash(node.model_dump(exclude={"node_id", "timestamp", "content_hash"}))
+    node.content_hash = node.compute_hash(
+        node.model_dump(exclude={"node_id", "timestamp", "content_hash"})
+    )
 
     # Corrupt the hash
     node.content_hash = "corrupted_hash_value"
 
     # Validate should raise
-    with pytest.raises(ProvenanceIntegrityError, match="Node content hash mismatch"):
+    with pytest.raises(
+        ProvenanceIntegrityError, match="Node content hash mismatch"
+    ):
         provenance_registry.validate_node(node)

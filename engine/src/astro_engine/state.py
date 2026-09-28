@@ -11,12 +11,14 @@ no LLM outputs, and no subjective interpretations.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime  # noqa: TC003 (runtime needed for Pydantic v2 forward-ref resolution)
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from astro_engine.conventions import ConventionProfile
+from astro_engine.conventions import (
+    ConventionProfile,  # noqa: TC001 (runtime needed for Pydantic v2 forward-ref resolution)
+)
 
 # ---------------------------------------------------------------------------
 # Input metadata

@@ -9,7 +9,6 @@ import pytest
 from astro_engine.nakshatra import (
     NAKSHATRA_NAMES,
     NAKSHATRA_SPAN,
-    NakshatraResult,
     compute_nakshatra,
 )
 

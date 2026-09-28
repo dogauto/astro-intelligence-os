@@ -21,7 +21,10 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from astro_engine.conventions import ConventionProfile
 
 from astro_engine import __version__
 from astro_engine.ashtakavarga import compute_ashtakavarga
@@ -32,13 +35,13 @@ from astro_engine.astronomy import (
     datetime_to_jd,
     longitude_to_sign,
 )
-from astro_engine.conventions import ConventionProfile
 from astro_engine.dasha import compute_vimshottari_dasha
 from astro_engine.nakshatra import compute_nakshatra
 from astro_engine.provenance import (
     AstronomyComputationNode,
     AstroStateNode,
     BirthInputNode,
+    CalculationNode,
     ConventionProfileNode,
     ProvenanceRegistry,
 )
@@ -65,6 +68,9 @@ class AstroStateBuilder:
         convention: ConventionProfile,
         transit_datetime: datetime | None = None,
         provenance_registry: ProvenanceRegistry | None = None,
+        include_chart: bool = True,
+        include_dashas: bool = True,
+        dasha_override: dict[str, Any] | None = None,
     ) -> AstroState:
         """
         Compute a full AstroState.
@@ -137,8 +143,8 @@ class AstroStateBuilder:
 
         # --- Dasha ---
         moon_pos = planet_positions.get(Planet.MOON)
-        dasha_data = None
-        if moon_pos:
+        dasha_data = dasha_override
+        if dasha_data is None and include_dashas and moon_pos:
             dasha_state = compute_vimshottari_dasha(
                 moon_longitude=moon_pos.longitude,
                 birth_datetime=birth_input.datetime_utc,
@@ -237,7 +243,7 @@ class AstroStateBuilder:
             "input": birth_input.model_dump(mode="json"),
             "convention": convention.model_dump(mode="json"),
             "planets": [p.model_dump(mode="json") for p in planet_entries],
-            "chart": chart.model_dump(mode="json") if chart else None,
+            "chart": chart.model_dump(mode="json") if chart and include_chart else None,
             "vargas": vargas_data,
             "dashas": dasha_data,
             "strengths": strengths_data,
@@ -277,9 +283,23 @@ class AstroStateBuilder:
                 ephemeris_source="moshier" if not self._engine._ephemeris_path else "swiss",
                 ephemeris_version="unknown",
             )
-            astronomy_node.content_hash = astronomy_node.compute_hash(astronomy_node.model_dump(exclude={"node_id", "timestamp", "content_hash"}))
+            astronomy_node.content_hash = astronomy_node.compute_hash(
+                astronomy_node.model_dump(exclude={"node_id", "timestamp", "content_hash"})
+            )
             provenance_registry.add_node(astronomy_node)
             astronomy_node_id = astronomy_node.node_id
+
+            # Register CalculationNode for the core astronomical computation
+            calculation_node = CalculationNode(
+                version=__version__,
+                calculation_name="astronomical_position_computation",
+                parent_ids=[astronomy_node_id],
+            )
+            calculation_node.content_hash = calculation_node.compute_hash(
+                calculation_node._content_dict()
+            )
+            provenance_registry.add_node(calculation_node)
+            calculation_node_id = calculation_node.node_id
 
             # Register AstroState node — must happen BEFORE ComputationProvenance
             # so that the state_id and node_id are both known.
@@ -290,7 +310,7 @@ class AstroStateBuilder:
                 ephemeris_type="moshier" if not self._engine._ephemeris_path else "swiss",
                 ayanamsa_value=ayanamsa_value,
                 julian_day=jd,
-                parent_ids=[astronomy_node_id] if astronomy_node_id else [],
+                parent_ids=[calculation_node_id] if calculation_node_id else [],
             )
             astrostate_node.content_hash = astrostate_node.compute_hash(
                 astrostate_node.model_dump(exclude={"node_id", "timestamp", "content_hash"})
@@ -313,7 +333,7 @@ class AstroStateBuilder:
             input=birth_input,
             convention=convention,
             planets=planet_entries,
-            chart=chart,
+            chart=chart if include_chart else None,
             vargas=vargas_data,
             dashas=dasha_data,
             strengths=strengths_data,

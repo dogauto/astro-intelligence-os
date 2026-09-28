@@ -27,7 +27,10 @@ This method does NOT use any LLM. It is purely rule-based.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from astro_engine.state import AstroState
 
 from astro_engine.astronomy import SIGN_NAMES
 from astro_engine.methods import (
@@ -36,9 +39,8 @@ from astro_engine.methods import (
     MethodRun,
     Prediction,
     PredictionDirection,
-    QuestionContext,
+    QuestionSpec,
 )
-from astro_engine.state import AstroState
 
 # ---------------------------------------------------------------------------
 # Sign lordship mapping (Parashari)
@@ -154,8 +156,22 @@ class VimshottariCareerMethod(Method):
     def required_calculations(self) -> list[str]:
         return ["planets", "chart", "dashas", "strengths"]
 
-    def run(self, state: AstroState, question: QuestionContext, provenance_registry: Any | None = None) -> MethodRun:
-        """Execute the Vimshottari career timing analysis."""
+    def run(
+        self,
+        state: AstroState,
+        question: QuestionSpec,
+        provenance_registry: Any | None = None,
+    ) -> MethodRun:
+        """Execute the Vimshottari career timing analysis.
+
+        Accepts only the canonical QuestionSpec. Legacy QuestionContext
+        inputs must be converted via question_context_to_spec() before
+        reaching this method.
+        """
+
+        # Extract question attributes from the canonical QuestionSpec
+        q_time_horizon = getattr(question, "time_horizon", None)
+        q_question_id = question.question_id
 
         rules_evaluated: list[str] = []
         calculations_used: list[str] = ["planets", "chart", "dashas"]
@@ -167,16 +183,24 @@ class VimshottariCareerMethod(Method):
         # --- Validate required data ---
         if state.dashas is None:
             warnings.append("Dasha data not available in AstroState.")
+            predictions.append(self._build_abstention_prediction(
+                state, question, q_question_id, "Missing dasha data in AstroState."
+            ))
             return self._build_run(
-                state, question, rules_evaluated, calculations_used,
+                state, question, q_question_id, rules_evaluated, calculations_used,
                 intermediate_findings, predictions, assumptions, warnings,
+                provenance_registry,
             )
 
         if state.chart is None:
             warnings.append("Chart data not available in AstroState.")
+            predictions.append(self._build_abstention_prediction(
+                state, question, q_question_id, "Missing chart data in AstroState."
+            ))
             return self._build_run(
-                state, question, rules_evaluated, calculations_used,
+                state, question, q_question_id, rules_evaluated, calculations_used,
                 intermediate_findings, predictions, assumptions, warnings,
+                provenance_registry,
             )
 
         # --- Extract key data ---
@@ -219,11 +243,22 @@ class VimshottariCareerMethod(Method):
         if not isinstance(dasha_data, dict):
             warnings.append("Dasha data format unexpected.")
             return self._build_run(
-                state, question, rules_evaluated, calculations_used,
+                state, question, q_question_id, rules_evaluated, calculations_used,
                 intermediate_findings, predictions, assumptions, warnings,
             )
 
         maha_dashas = dasha_data.get("maha_dashas", [])
+
+        if not maha_dashas:
+            warnings.append("No Maha Dasha periods found in dasha data.")
+            predictions.append(self._build_abstention_prediction(
+                state, question, q_question_id, "No Maha Dasha periods available."
+            ))
+            return self._build_run(
+                state, question, q_question_id, rules_evaluated, calculations_used,
+                intermediate_findings, predictions, assumptions, warnings,
+                provenance_registry,
+            )
 
         for md in maha_dashas:
             md_lord = md["lord"]
@@ -231,10 +266,10 @@ class VimshottariCareerMethod(Method):
             md_end = datetime.fromisoformat(md["end"])
 
             # Apply question time horizon if specified
-            if question.time_horizon_years:
+            if q_time_horizon:
                 horizon_end = state.input.datetime_utc + __import__(
                     'datetime'
-                ).timedelta(days=question.time_horizon_years * 365.25)
+                ).timedelta(days=q_time_horizon * 365.25)
                 if md_start > horizon_end:
                     continue  # Beyond time horizon
 
@@ -272,7 +307,10 @@ class VimshottariCareerMethod(Method):
 
             # Rule 9: Planets in 10th house
             if md_lord in planets_in_10th:
-                career_signals.append(f"{md_lord} is placed in 10th house — direct career influence")
+                career_signals.append(
+                    f"{md_lord} is placed in 10th house"
+                    " — direct career influence"
+                )
                 evidence.append(f"R9: {md_lord} occupies 10th house")
                 magnitude_boost += 0.15
                 rules_evaluated.append("R9_planet_in_10th")
@@ -280,26 +318,39 @@ class VimshottariCareerMethod(Method):
             # Planet-based themes (Rules 5-8)
             theme_info = PLANET_CAREER_THEMES.get(md_lord, {})
             if theme_info:
-                career_signals.append(f"{md_lord} career theme: {theme_info.get('theme', 'general')}")
+                career_signals.append(
+                    f"{md_lord} career theme: {theme_info.get('theme', 'general')}"
+                )
                 rules_evaluated.append(f"R_planet_theme_{md_lord}")
 
             if career_signals:
-                base_magnitude = theme_info.get("magnitude_base", 0.5) if theme_info else 0.5
-                direction = theme_info.get("direction", PredictionDirection.MIXED) if theme_info else PredictionDirection.MIXED
+                base_magnitude = (
+                    theme_info.get("magnitude_base", 0.5) if theme_info else 0.5
+                )
+                direction = (
+                    theme_info.get("direction", PredictionDirection.MIXED)
+                    if theme_info
+                    else PredictionDirection.MIXED
+                )
 
                 predictions.append(Prediction(
                     domain="career",
                     event="career_period_activation",
                     direction=direction,
                     magnitude=min(1.0, base_magnitude + magnitude_boost),
+                    signal_strength=min(0.9, 0.5 + magnitude_boost),
                     time_window_start=md_start,
                     time_window_end=md_end,
-                    duration_description=f"Maha Dasha of {md_lord} ({round(md['duration_days']/365.25, 1)} years)",
+                    duration_description=(
+                        f"Maha Dasha of {md_lord}"
+                        f" ({round(md['duration_days']/365.25, 1)} years)"
+                    ),
                     conditions=career_signals,
                     supporting_evidence=evidence,
                     method_id=self.method_id,
                     method_version=self.version,
                     raw_confidence=min(0.9, 0.5 + magnitude_boost),
+                    question_id=q_question_id,
                 ))
 
         # --- Assumptions ---
@@ -311,15 +362,35 @@ class VimshottariCareerMethod(Method):
         ])
 
         return self._build_run(
-            state, question, rules_evaluated, calculations_used,
+            state, question, q_question_id, rules_evaluated, calculations_used,
             intermediate_findings, predictions, assumptions, warnings,
             provenance_registry,
+        )
+
+    def _build_abstention_prediction(
+        self,
+        state: AstroState,
+        question: QuestionSpec,
+        q_question_id: str,
+        reason: str,
+    ) -> Prediction:
+        """Build a canonical abstention Prediction with full identity fields."""
+        return Prediction(
+            domain=question.domain,
+            event="career_timing_abstention",
+            direction=PredictionDirection.UNKNOWN,
+            is_abstention=True,
+            abstention_reason=reason,
+            method_id=self.method_id,
+            method_version=self.version,
+            question_id=q_question_id,
         )
 
     def _build_run(
         self,
         state: AstroState,
-        question: QuestionContext,
+        question: QuestionSpec,
+        q_question_id: str | None,
         rules_evaluated: list[str],
         calculations_used: list[str],
         intermediate_findings: list[dict[str, Any]],
@@ -338,9 +409,13 @@ class VimshottariCareerMethod(Method):
                 run_id="",
                 method_id=self.method_id,
                 input_state_hash=state.state_id,
-                parent_ids=[state.provenance.astrostate_node_id] if state.provenance.astrostate_node_id else []
+                parent_ids=[
+                    state.provenance.astrostate_node_id
+                ] if state.provenance.astrostate_node_id else []
             )
-            run_node.compute_hash(run_node.model_dump(exclude={"node_id", "timestamp", "content_hash", "run_id"}))
+            run_node.compute_hash(
+                run_node.model_dump(exclude={"node_id", "timestamp", "content_hash", "run_id"})
+            )
             run_node.run_id = run_node.node_id
             provenance_registry.add_node(run_node)
             run_node_id = run_node.node_id
@@ -355,7 +430,9 @@ class VimshottariCareerMethod(Method):
                         logic_description=f"Rule {rule_id}",
                         parent_ids=[run_node_id]
                     )
-                    r_node.compute_hash(r_node.model_dump(exclude={"node_id", "timestamp", "content_hash"}))
+                    r_node.compute_hash(
+                        r_node.model_dump(exclude={"node_id", "timestamp", "content_hash"})
+                    )
                     provenance_registry.add_node(r_node)
                     rule_nodes.append(r_node.node_id)
 
@@ -364,9 +441,14 @@ class VimshottariCareerMethod(Method):
                     prediction_id="",
                     domain=pred.domain,
                     event=pred.event,
+                    question_id=question.question_id,
                     parent_ids=[run_node_id] + rule_nodes
                 )
-                pred_node.compute_hash(pred_node.model_dump(exclude={"node_id", "timestamp", "content_hash", "prediction_id"}))
+                pred_node.compute_hash(
+                    pred_node.model_dump(
+                        exclude={"node_id", "timestamp", "content_hash", "prediction_id"}
+                    )
+                )
                 pred_node.prediction_id = pred_node.node_id
                 provenance_registry.add_node(pred_node)
 
@@ -380,6 +462,8 @@ class VimshottariCareerMethod(Method):
             method_id=self.method_id,
             method_version=self.version,
             input_state_id=state.state_id,
+            input_state_hash=state.state_id,
+            question_id=q_question_id,
             question=question,
             rules_evaluated=rules_evaluated,
             calculations_used=calculations_used,

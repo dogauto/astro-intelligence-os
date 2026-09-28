@@ -2,7 +2,7 @@
 Tests for the Vimshottari Dasha module.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -38,7 +38,7 @@ class TestVimshottariDasha:
     @pytest.fixture()
     def sample_dasha(self) -> DashaState:
         """Compute dasha for Moon at 0° (Ashwini, lord = Ketu)."""
-        birth = datetime(1990, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+        birth = datetime(1990, 1, 1, 12, 0, 0, tzinfo=UTC)
         return compute_vimshottari_dasha(0.0, birth)
 
     def test_first_lord_is_nakshatra_lord(self, sample_dasha: DashaState) -> None:
@@ -57,7 +57,7 @@ class TestVimshottariDasha:
     def test_total_duration_120_years(self) -> None:
         """For Moon at 0° (start of nakshatra), balance = 1.0,
         so total should be very close to 120 years."""
-        birth = datetime(1990, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+        birth = datetime(1990, 1, 1, 12, 0, 0, tzinfo=UTC)
         dasha = compute_vimshottari_dasha(0.0, birth)
         total_days = sum(md.duration_days for md in dasha.maha_dashas)
         total_years = total_days / YEAR_IN_DAYS
@@ -65,14 +65,14 @@ class TestVimshottariDasha:
 
     def test_balance_at_start_of_nakshatra(self) -> None:
         """At 0° (start of Ashwini), balance should be ~1.0."""
-        birth = datetime(1990, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+        birth = datetime(1990, 1, 1, 12, 0, 0, tzinfo=UTC)
         dasha = compute_vimshottari_dasha(0.0, birth)
         assert abs(dasha.nakshatra_balance - 1.0) < 0.001
 
     def test_balance_at_mid_nakshatra(self) -> None:
         """At midpoint of Ashwini, balance should be ~0.5."""
         mid = NAKSHATRA_SPAN / 2.0
-        birth = datetime(1990, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+        birth = datetime(1990, 1, 1, 12, 0, 0, tzinfo=UTC)
         dasha = compute_vimshottari_dasha(mid, birth)
         assert abs(dasha.nakshatra_balance - 0.5) < 0.01
 
@@ -102,7 +102,7 @@ class TestVimshottariDasha:
 
     def test_get_active_maha(self, sample_dasha: DashaState) -> None:
         """Should find the active Maha Dasha at birth."""
-        birth = datetime(1990, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+        birth = datetime(1990, 1, 1, 12, 0, 0, tzinfo=UTC)
         active = sample_dasha.get_active_maha(birth)
         assert active is not None
         assert active.lord == "Ketu"

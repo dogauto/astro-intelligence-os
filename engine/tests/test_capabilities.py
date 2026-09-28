@@ -1,5 +1,7 @@
-from astro_engine.capabilities import CapabilityError, validate_method_capabilities
 import pytest
+
+from astro_engine.capabilities import CapabilityError, validate_method_capabilities
+
 
 def test_experimental_method_allows_partial_with_warning():
     warnings = validate_method_capabilities("experimental", ["shadbala"])

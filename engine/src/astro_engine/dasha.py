@@ -12,11 +12,9 @@ based on the nakshatra lord sequence.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+from datetime import datetime, timedelta
 
-from astro_engine.nakshatra import NAKSHATRA_LORDS, NAKSHATRA_SPAN, compute_nakshatra
-
+from astro_engine.nakshatra import NAKSHATRA_SPAN, compute_nakshatra
 
 # ---------------------------------------------------------------------------
 # Vimshottari Dasha periods (in years)
@@ -81,7 +79,7 @@ class DashaState:
     birth_datetime: datetime
     maha_dashas: list[DashaPeriod]
 
-    def get_active_maha(self, dt: datetime) -> Optional[DashaPeriod]:
+    def get_active_maha(self, dt: datetime) -> DashaPeriod | None:
         """Find the active Maha Dasha at the given time."""
         for md in self.maha_dashas:
             if md.is_active(dt):
@@ -195,11 +193,7 @@ def compute_vimshottari_dasha(
     for i, lord in enumerate(lord_order):
         full_duration_days = DASHA_YEARS[lord] * YEAR_IN_DAYS
 
-        if i == 0:
-            # First dasha: only the remaining balance
-            duration_days = full_duration_days * balance
-        else:
-            duration_days = full_duration_days
+        duration_days = full_duration_days * balance if i == 0 else full_duration_days
 
         end = current_start + timedelta(days=duration_days)
 

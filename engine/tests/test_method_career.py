@@ -5,21 +5,20 @@ This is the first methodology test — it validates that the Method SDK
 interface works end-to-end with real AstroState data.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
 from astro_engine.astronomy import AstronomyEngine
 from astro_engine.builder import AstroStateBuilder
 from astro_engine.conventions import PARASHARI_LAHIRI
-from astro_engine.methods import MethodMaturity, QuestionContext
+from astro_engine.methods import MethodMaturity, QuestionSpec
 from astro_engine.methods.vimshottari_career import VimshottariCareerMethod
-from astro_engine.state import BirthInput
-
+from astro_engine.state import AstroState, BirthInput
 
 # Reference chart: Gandhi
 GANDHI_INPUT = BirthInput(
-    datetime_utc=datetime(1869, 10, 2, 1, 37, 0, tzinfo=timezone.utc),
+    datetime_utc=datetime(1869, 10, 2, 1, 37, 0, tzinfo=UTC),
     datetime_local=datetime(1869, 10, 2, 7, 11, 40),
     timezone_name="Asia/Kolkata",
     latitude=21.6417,
@@ -29,11 +28,10 @@ GANDHI_INPUT = BirthInput(
     rodden_rating="B",
 )
 
-CAREER_QUESTION = QuestionContext(
+CAREER_QUESTION = QuestionSpec(
+    question_id="gandhi-career-event-timing",
     domain="career",
-    task="event_timing",
-    event="career_transition",
-    raw_question="What significant career periods are indicated?",
+    event_type="event_timing",
 )
 
 
@@ -45,7 +43,7 @@ class TestVimshottariCareerMethod:
         return VimshottariCareerMethod()
 
     @pytest.fixture()
-    def state(self):
+    def state(self) -> AstroState:
         engine = AstronomyEngine()
         builder = AstroStateBuilder(engine)
         return builder.build(GANDHI_INPUT, PARASHARI_LAHIRI)
@@ -63,7 +61,11 @@ class TestVimshottariCareerMethod:
 
     def test_cannot_handle_health(self, method: VimshottariCareerMethod) -> None:
         """Should not handle health domain questions."""
-        health_q = QuestionContext(domain="health", task="diagnosis")
+        health_q = QuestionSpec(
+            question_id="health-diagnosis-q",
+            domain="health",
+            event_type="diagnosis",
+        )
         assert method.can_handle(health_q) is False
 
     def test_run_produces_method_run(self, method: VimshottariCareerMethod, state) -> None:

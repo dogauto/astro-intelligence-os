@@ -4,7 +4,7 @@ Tests for the Astronomy module — Julian Day conversion and sign utilities.
 These tests do NOT require Swiss Ephemeris and test pure utility functions.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -21,13 +21,13 @@ class TestJulianDay:
 
     def test_j2000_epoch(self) -> None:
         """J2000.0 = Jan 1.5, 2000 TT ≈ JD 2451545.0."""
-        dt = datetime(2000, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+        dt = datetime(2000, 1, 1, 12, 0, 0, tzinfo=UTC)
         jd = datetime_to_jd(dt)
         assert abs(jd - 2451545.0) < 0.001
 
     def test_roundtrip(self) -> None:
         """Converting to JD and back should preserve the datetime."""
-        original = datetime(1990, 7, 15, 10, 30, 0, tzinfo=timezone.utc)
+        original = datetime(1990, 7, 15, 10, 30, 0, tzinfo=UTC)
         jd = datetime_to_jd(original)
         recovered = jd_to_datetime(jd)
         # Allow 1 second tolerance due to floating point

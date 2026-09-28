@@ -3,8 +3,8 @@ Tests for the ConventionProfile module.
 """
 
 from astro_engine.conventions import (
-    PARASHARI_LAHIRI,
     KP_PROFILE,
+    PARASHARI_LAHIRI,
     AyanamsaType,
     ConventionProfile,
     HouseSystem,
@@ -34,8 +34,8 @@ class TestConventionProfile:
         """ConventionProfile should be frozen/immutable."""
         p = PARASHARI_LAHIRI
         try:
-            p.zodiac = ZodiacType.TROPICAL  # type: ignore[misc]
-            assert False, "Should have raised an error"
+            p.zodiac = ZodiacType.TROPICAL
+            raise AssertionError("Should have raised an error")
         except Exception:
             pass  # Expected
 

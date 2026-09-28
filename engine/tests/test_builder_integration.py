@@ -4,7 +4,7 @@ Integration test: Build a full AstroState for a known chart and verify.
 This test requires pyswisseph to be installed.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -13,12 +13,11 @@ from astro_engine.builder import AstroStateBuilder
 from astro_engine.conventions import PARASHARI_LAHIRI
 from astro_engine.state import BirthInput
 
-
 # A well-known reference chart:
 # Mahatma Gandhi — Oct 2, 1869, 7:11:40 AM LMT, Porbandar, India
 # (Approximate — used for structural validation, not precision claims)
 GANDHI_INPUT = BirthInput(
-    datetime_utc=datetime(1869, 10, 2, 1, 37, 0, tzinfo=timezone.utc),
+    datetime_utc=datetime(1869, 10, 2, 1, 37, 0, tzinfo=UTC),
     datetime_local=datetime(1869, 10, 2, 7, 11, 40),
     timezone_name="Asia/Kolkata",
     latitude=21.6417,

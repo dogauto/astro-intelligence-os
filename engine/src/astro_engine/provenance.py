@@ -8,16 +8,16 @@ of any astrological prediction back to the ephemeris and birth input.
 
 from __future__ import annotations
 
+import enum
 import hashlib
 import json
 from datetime import UTC, datetime
-from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class ProvenanceNodeType(str, Enum):
+class ProvenanceNodeType(enum.StrEnum):
     BIRTH_INPUT = "BIRTH_INPUT"
     CONVENTION_PROFILE = "CONVENTION_PROFILE"
     ASTRONOMY_COMPUTATION = "ASTRONOMY_COMPUTATION"
@@ -90,6 +90,10 @@ class ConventionProfileNode(ProvenanceNode):
     convention_id: str
     ayanamsa: str
     house_system: str
+    chara_karaka_scheme: int | None = None
+    rahu_rule: str | None = None
+    ketu_excluded: bool | None = None
+    precision: str | None = None
 
 
 class AstronomyComputationNode(ProvenanceNode):
@@ -113,12 +117,24 @@ class AstroStateNode(ProvenanceNode):
 class CalculationNode(ProvenanceNode):
     node_type: ProvenanceNodeType = ProvenanceNodeType.CALCULATION
     calculation_name: str
+    convention_id: str | None = None
+    input_state_id: str | None = None
+    source_rule_ids: list[str] = Field(default_factory=list)
+    source_id: str | None = None
+    source_location: str | None = None
+    chara_karaka_scheme: int | None = None
+    rahu_rule: str | None = None
+    ketu_excluded: bool | None = None
+    precision: str | None = None
 
 
 class RuleNode(ProvenanceNode):
     node_type: ProvenanceNodeType = ProvenanceNodeType.RULE
     rule_id: str
     logic_description: str
+    source_id: str | None = None
+    source_location: str | None = None
+    convention_id: str | None = None
 
 
 class MethodRunNode(ProvenanceNode):
@@ -133,6 +149,10 @@ class PredictionNode(ProvenanceNode):
     prediction_id: str
     domain: str
     event: str
+    question_id: str | None = Field(
+        default=None,
+        description="QuestionSpec id this prediction addresses.",
+    )
 
 
 class ProvenanceRegistry:

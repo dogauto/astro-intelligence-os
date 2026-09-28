@@ -28,10 +28,8 @@ simplified formulas that will be refined in later phases.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 from astro_engine.astronomy import Planet, PlanetPosition
-
 
 # ---------------------------------------------------------------------------
 # Exaltation degrees (sidereal, Parashari)

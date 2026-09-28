@@ -4,8 +4,7 @@ Tests for the Varga (Divisional Charts) module.
 
 import pytest
 
-from astro_engine.astronomy import SIGN_NAMES
-from astro_engine.vargas import VargaType, VargaPosition, compute_varga, compute_all_vargas
+from astro_engine.vargas import VargaType, compute_all_vargas, compute_varga
 
 
 class TestD1Rasi:

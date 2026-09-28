@@ -167,4 +167,4 @@ Entries are appended chronologically and represent strictly verified states.
 - Astronomy calculations require external verification against NASA JPL.
 
 ### Recommended Next Action:
-- Build `docs/CALCULATION_DEPENDENCY_GRAPH.md` and complete documentation updates as per the second audit constraints.
+- Implement programmatic Provenance traversal infrastructure (Gate 8).

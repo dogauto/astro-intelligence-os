@@ -11,17 +11,15 @@ Every AstroState is tagged with the exact ConventionProfile that produced it.
 
 from __future__ import annotations
 
-from enum import Enum
-from typing import Optional
+import enum
 
-from pydantic import BaseModel, ConfigDict, Field
-
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 # ---------------------------------------------------------------------------
 # Ayanamsa choices
 # ---------------------------------------------------------------------------
 
-class AyanamsaType(str, Enum):
+class AyanamsaType(enum.StrEnum):
     """Supported ayanamsa (precession correction) systems."""
 
     LAHIRI = "lahiri"
@@ -37,7 +35,7 @@ class AyanamsaType(str, Enum):
 # House system choices
 # ---------------------------------------------------------------------------
 
-class HouseSystem(str, Enum):
+class HouseSystem(enum.StrEnum):
     """Supported house division systems."""
 
     WHOLE_SIGN = "whole_sign"
@@ -54,7 +52,7 @@ class HouseSystem(str, Enum):
 # Rahu / Ketu node type
 # ---------------------------------------------------------------------------
 
-class NodeType(str, Enum):
+class NodeType(enum.StrEnum):
     """True vs Mean lunar node calculation."""
 
     TRUE_NODE = "true_node"
@@ -65,7 +63,7 @@ class NodeType(str, Enum):
 # Zodiac type
 # ---------------------------------------------------------------------------
 
-class ZodiacType(str, Enum):
+class ZodiacType(enum.StrEnum):
     """Tropical (Western) vs Sidereal (Vedic)."""
 
     SIDEREAL = "sidereal"
@@ -76,7 +74,7 @@ class ZodiacType(str, Enum):
 # Dasha system choices
 # ---------------------------------------------------------------------------
 
-class DashaSystem(str, Enum):
+class DashaSystem(enum.StrEnum):
     """Primary dasha timing system to use."""
 
     VIMSHOTTARI = "vimshottari"
@@ -143,8 +141,15 @@ class ConventionProfile(BaseModel):
         description="7 or 8 planet chara karaka scheme.",
     )
 
+    @field_validator("chara_karaka_scheme")
+    @classmethod
+    def _validate_chara_karaka_scheme(cls, value: int) -> int:
+        if value not in (7, 8):
+            raise ValueError("chara_karaka_scheme must be 7 or 8.")
+        return value
+
     # Birth-time rectification tolerance
-    birth_time_precision_seconds: Optional[int] = Field(
+    birth_time_precision_seconds: int | None = Field(
         default=None,
         description="Known precision of the birth time in seconds, if declared.",
     )
@@ -159,12 +164,40 @@ class ConventionProfile(BaseModel):
 PARASHARI_LAHIRI = ConventionProfile(
     id="parashari-lahiri-ws-v1",
     name="Parashari-Lahiri-WholeSgn",
-    description="Standard North Indian Parashari tradition with Lahiri ayanamsa and whole-sign houses.",
+    description="Standard North Indian Parashari tradition with Lahiri ayanamsa"
+    " and whole-sign houses.",
     zodiac=ZodiacType.SIDEREAL,
     ayanamsa=AyanamsaType.LAHIRI,
     house_system=HouseSystem.WHOLE_SIGN,
     node_type=NodeType.MEAN_NODE,
     primary_dasha=DashaSystem.VIMSHOTTARI,
+)
+
+JAIMINI_LAHIRI_7 = ConventionProfile(
+    id="jaimini-chara-karaka-7-sidereal-v1",
+    name="Jaimini-Chara-Karaka-7-Lahiri",
+    description="Seven-karaka Chara Karaka calculation using sidereal Lahiri longitudes.",
+    zodiac=ZodiacType.SIDEREAL,
+    ayanamsa=AyanamsaType.LAHIRI,
+    house_system=HouseSystem.WHOLE_SIGN,
+    node_type=NodeType.MEAN_NODE,
+    primary_dasha=DashaSystem.VIMSHOTTARI,
+    chara_karaka_scheme=7,
+)
+
+JAIMINI_LAHIRI_8 = ConventionProfile(
+    id="jaimini-chara-karaka-8-sidereal-v1",
+    name="Jaimini-Chara-Karaka-8-Lahiri",
+    description=(
+        "Eight-karaka Chara Karaka calculation with Rahu reversed "
+        "from the end of the sign."
+    ),
+    zodiac=ZodiacType.SIDEREAL,
+    ayanamsa=AyanamsaType.LAHIRI,
+    house_system=HouseSystem.WHOLE_SIGN,
+    node_type=NodeType.MEAN_NODE,
+    primary_dasha=DashaSystem.VIMSHOTTARI,
+    chara_karaka_scheme=8,
 )
 
 KP_PROFILE = ConventionProfile(

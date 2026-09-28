@@ -18,10 +18,8 @@ sum across all 7 planets.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 from astro_engine.astronomy import Planet
-
 
 # ---------------------------------------------------------------------------
 # Benefic positions for each planet (houses where bindu is given)
