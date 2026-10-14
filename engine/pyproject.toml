@@ -31,6 +31,19 @@ astro = "astro_cli.main:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+include = [
+    "astro_engine",
+    "astro_engine.*",
+    "astro_cli",
+    "astro_cli.*",
+]
+exclude = [
+    "governance",
+    "governance.*",
+    "astro_engine.governance",
+    "astro_engine.governance.*",
+]
+namespaces = false
 
 [tool.ruff]
 target-version = "py311"
@@ -56,3 +69,11 @@ ignore_errors = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v --tb=short"
+
+[tool.coverage.run]
+branch = true
+source = ["astro_engine"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 88

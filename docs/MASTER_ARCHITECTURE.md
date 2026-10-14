@@ -1,73 +1,116 @@
-# Astro Intelligence OS - Master Architecture
+# Astro Intelligence OS — Master Architecture
 
-## 1. Current Implementation State
-**Assessment Date:** 2026-09-26
-**Status:** IN_PROGRESS (Phase 5)
+## 1. Current implementation state
 
-The repository currently implements the foundational deterministic engine in Python:
-- **`engine/src/astro_engine/`:** Calculation core using `pyswisseph` for astronomy, D1-D60 Vargas, Vimshottari Dashas, partial Shadbala, and Ashtakavarga.
-- **`state.py`:** Fully immutable, canonical `AstroState` object.
-- **`methods/`:** The execution SDK and two isolated methods (`VimshottariCareerMethod`, `TransitCareerMethod`).
-- **Tests:** A suite of 101 unit/integration tests running locally and via GitHub Actions CI.
+**Assessment date:** 2026-10-13
+**Status:** M1 / Gate 0 verified locally and by GitHub Actions
 
-The architecture strictly differentiates between:
-- **VERIFIED:** Core conventions and infrastructure.
-- **EXPERIMENTAL:** Method execution SDK and methodologies.
-- **PARTIAL:** Shadbala and Pratyantar Dasha calculations.
-- **PLANNED:** Method Orchestrator, Convergence, Ensemble Evaluation.
+The current release boundary is a modular Python engine:
 
-## 2. Target State
-We will adopt a modular monorepo structure to isolate the calculation engine from the inference layers and product UIs.
+- `engine/src/astro_engine/` contains the Swiss Ephemeris-backed calculation
+  core, state models, conventions, method SDK, provenance primitives, and the
+  experimental career-comparison slice.
+- `engine/src/astro_cli/` contains the current command-line adapter.
+- `contracts/` contains shared request-schema material.
+- No `/apps`, `/packages`, or `/services` implementation is present in this
+  checkout.
+- Governance/control-plane WIP is quarantined from the product package.
 
-### Conceptual Directory Structure
+### Current M1 evidence
+
+In a clean Python 3.11.14 environment using only the locked development
+dependencies:
+
+- 257 tests passed and 1 package-boundary test was skipped when no wheel path
+  was supplied;
+- combined line/branch coverage was 88.74%, above the configured 88% floor;
+- Ruff and Mypy passed;
+- the wheel contained only `astro_cli` and `astro_engine`;
+- the installed wheel passed `astro --version` and `astro list-methods` smoke
+  checks.
+
+The GitHub Actions workflow passed for PR #1. M1 is verified for the branch;
+merging remains a separate repository action.
+
+### Maturity boundary
+
+The following are not asserted as complete by this document:
+
+- deep immutability of nested state values;
+- complete input/timezone validation;
+- full Swiss Ephemeris convention isolation under concurrency;
+- independent validation of every calculation or named rule;
+- executor capability enforcement;
+- mandatory provenance eligibility;
+- locked/blinded outcome evaluation;
+- production security or multi-user deployment.
+
+These are later gates. Local test counts do not promote them to verified status.
+
+## 2. Target architecture
+
+The target for the next delivery cycle is a **modular Python monolith**, not a
+microservice fleet:
+
+```text
+validated request
+    -> convention resolver
+    -> AstronomyEngine
+    -> AstroStateBuilder
+    -> immutable AstroState
+    -> isolated method execution
+    -> MethodRun records
+    -> provenance validation
+    -> bounded comparison kernel
+    -> locked evaluation artifacts
 ```
-/apps
-    /web
-    /research-cockpit
-    /api
-/packages
-    /astro-engine
-    /astronomy
-    /astro-state
-    /conventions
-    /methods
-    /method-sdk
-    /ensemble
-    /prediction
-    /evidence
-    /temporal
-    /agents
-    /evaluation
-    /learning
-    /knowledge
-    /shared
-/services
-    /calculation
-    /method-runner
-    /ensemble-runner
-    /agent-orchestrator
-    /evaluation-worker
-/tests
-/docs
-```
 
-## 3. Pipeline Architecture
-The epistemic layers enforce separation of calculated facts, method inferences, ensemble reasoning, and generation:
-1. **Astronomy Foundation** (Determinism)
-2. **Astrological Calculation Engine** 
-3. **Unified AstroState** (Canonical Snapshot)
-4. **Method Orchestrator**
-5. **Parallel Independent Method Runs**
-6. **Prediction Normalizer**
-7. **Convergence & Dissent Engine**
-8. **Agent Review / Debate**
-9. **Temporal Synthesis & Evaluation**
+API, UI, storage, and language synthesis are future application boundaries.
+They must not be added until the deterministic kernel and research contracts
+pass their gates.
 
-## 4. Technical Risks & Mitigations
-- **Risk:** LLM Hallucinations in Calculations.
-  **Mitigation:** The system strictly separates Layer 1 (Computed Fact) from Layer 6 (Language Generation). All calculations are deterministic code.
-- **Risk:** Contamination across Methodologies.
-  **Mitigation:** Methods are executed entirely independently in parallel.
+## 3. Pipeline responsibilities
 
-## 5. Migration Strategy
-Not applicable at this stage as there is no legacy code.
+1. **Boundary validation** — reject malformed datetime, timezone, and location
+   inputs before astronomy.
+2. **Astronomy foundation** — calculate supported bodies under an explicit
+   ephemeris and convention policy.
+3. **Astrological calculations** — expose each calculation with an explicit
+   maturity, dependency, and limitation status.
+4. **Canonical state** — produce a serializable, deeply immutable snapshot with
+   stable identity.
+5. **Method SDK** — run one method against one state and question without
+   access to sibling predictions.
+6. **Executor** — enforce question and capability preconditions and preserve
+   `SUCCESS`, `ABSTAINED`, and `FAILED` outcomes.
+7. **Comparison kernel** — report factual relationships and dissent without
+   silently voting, ranking, or turning heuristics into probabilities.
+8. **Provenance** — require a complete trace for research-eligible output.
+9. **Evaluation** — lock predictions before outcomes and compare against
+   predeclared baselines only after the provenance gate passes.
+
+## 4. Architectural risks and controls
+
+| Risk | Required control |
+|---|---|
+| Global Swiss Ephemeris convention state | Protect the complete convention-sensitive operation; prove mixed-profile results against serial references |
+| Nested mutable state | Use a deep immutable representation or explicit copy-on-write and test hash stability |
+| Unsupported or partial calculations | Enforce a machine-readable capability catalog before method execution |
+| Missing or colliding provenance | Use deterministic, prediction-specific identities and fail closed for auditable output |
+| Evaluation leakage | Seal predictions before outcomes and blind method identity during adjudication |
+| Real birth-data exposure | Keep the current boundary synthetic/public and offline until the security gate is implemented |
+| Architecture overreach | Keep the engine in one process until measurements justify another boundary |
+
+## 5. Migration strategy
+
+1. Preserve the current dirty audit checkout as evidence; implement in a clean
+   worktree.
+2. Adopt or park existing WIP clusters as units; do not cherry-pick generated
+   metadata or individual coupled calculation files.
+3. Preserve public method IDs and historical state artifacts through versioned
+   adapters; never silently reinterpret old records.
+4. Use fixed fixtures to compare old and hardened behavior, and record
+   intentional changes such as newly rejected invalid inputs.
+5. Add an application wrapper only after the kernel passes the relevant
+   evaluation and security gates. Do not split the calculation core into
+   services without measured need.

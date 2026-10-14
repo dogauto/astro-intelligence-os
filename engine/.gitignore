@@ -26,6 +26,7 @@ htmlcov/
 .DS_Store
 
 # Engine build artifacts
+build/
 src/astro_engine.egg-info/
 *.egg
 
