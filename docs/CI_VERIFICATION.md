@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-13
 **Scope:** M1 / Gate 0 package and CI hardening
-**Status:** M1 local checks pass; GitHub Actions has not been run from this branch
+**Status:** M1 verified locally and by GitHub Actions
 
 ## 1. Current workflow
 
@@ -89,5 +89,13 @@ Using a clean Python 3.11.14 environment and only the locked `.[dev]` dependenci
 
 The single skipped test is the package-boundary test when no wheel path is supplied;
 the same test passed in the explicit wheel-inspection step. The wheel build still
-emits a non-blocking setuptools license-table deprecation warning. The remote CI
-job must run before M1 is treated as merged or fully verified.
+emits a non-blocking setuptools license-table deprecation warning.
+
+The remote GitHub Actions workflow passed for PR #1:
+
+- workflow: `Astro Engine CI`;
+- job: `build-and-test`;
+- run: `38503332771`;
+- job: https://github.com/dogauto/astro-intelligence-os/actions/runs/38503332771/job/115655075217.
+
+M1 is verified for the branch. Merging remains a separate repository action.

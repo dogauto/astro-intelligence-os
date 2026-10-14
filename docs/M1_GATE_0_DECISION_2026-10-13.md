@@ -3,7 +3,7 @@
 **Date:** 2026-10-13
 **Branch:** `plan/m1-gate-0-hardening`
 **Baseline:** `09ddbd33319a9aeb951fb3d21535d7a9cd48d93e`
-**Decision:** **Conditional pass — local evidence complete; remote CI pending**
+**Decision:** **Pass — local and remote CI evidence complete**
 
 ## Scope
 
@@ -46,15 +46,22 @@ installed wheel astro list-methods               PASS
 git diff --check                                 PASS
 ```
 
-## Remaining conditions
+## Final conditions
 
-1. Run the GitHub Actions workflow from this branch; local execution is not a
-   substitute for the Ubuntu runner.
-2. Resolve the non-blocking setuptools license-table deprecation warning and the
+1. Resolve the non-blocking setuptools license-table deprecation warning and the
    repository’s unresolved MIT-versus-Proprietary licensing metadata before a
    distribution release.
-3. Do not open M2 until the remote CI result is green and this decision record is
-   reviewed by the release/build owner.
+2. M2 may begin from a fresh implementation worktree after this decision record
+   is reviewed by the release/build owner. M2 remains a separate milestone.
+
+## Remote verification
+
+PR #1: https://github.com/dogauto/astro-intelligence-os/pull/1
+
+- `Astro Engine CI / build-and-test`: passed;
+- CodeRabbit review status: passed;
+- GitHub Actions run: `38503332771`;
+- no merge was performed by this session.
 
 ## Explicit non-decisions
 

@@ -3,7 +3,7 @@
 ## 1. Current implementation state
 
 **Assessment date:** 2026-10-13
-**Status:** M1 / Gate 0 local pass; remote CI pending
+**Status:** M1 / Gate 0 verified locally and by GitHub Actions
 
 The current release boundary is a modular Python engine:
 
@@ -29,8 +29,8 @@ dependencies:
 - the installed wheel passed `astro --version` and `astro list-methods` smoke
   checks.
 
-The GitHub Actions workflow has not yet run for this branch, so M1 remains
-conditionally open until the remote result is green.
+The GitHub Actions workflow passed for PR #1. M1 is verified for the branch;
+merging remains a separate repository action.
 
 ### Maturity boundary
 

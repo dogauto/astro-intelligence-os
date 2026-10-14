@@ -3,8 +3,8 @@
 > An offline deterministic astrology calculation engine with an experimental, career-specific method-comparison kernel.
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org)
-[![Tests](https://img.shields.io/badge/tests-automated-brightgreen.svg)]()
-[![Status](https://img.shields.io/badge/status-M1%20GATE%200%20LOCAL_PASS-orange.svg)]()
+[![Tests](https://img.shields.io/badge/tests-automated-brightgreen.svg)](https://github.com/dogauto/astro-intelligence-os/actions/workflows/ci.yml)
+[![Status](https://img.shields.io/badge/status-M1%20GATE%200%20VERIFIED-brightgreen.svg)](https://github.com/dogauto/astro-intelligence-os/actions/workflows/ci.yml)
 
 ---
 
@@ -132,7 +132,7 @@ The current supported claim is:
 
 | Milestone | Description | Status |
 |-----------|-------------|--------|
-| **M1 / Gate 0** | Reproducible package boundary and truthful CI | ✅ LOCAL_PASS_PENDING_CI |
+| **M1 / Gate 0** | Reproducible package boundary and truthful CI | ✅ VERIFIED |
 | **M2+** | Subsequent correctness, provenance, evaluation, and security gates | 📋 NOT_STARTED |
 
 Later gates remain planned until their current executable checks and evidence are complete.
