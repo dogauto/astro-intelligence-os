@@ -14,11 +14,10 @@ from typing import TYPE_CHECKING, Any
 from astro_engine.chara_karaka import (
     CONVENTION_ID,
     CONVENTION_ID_8,
-    RULE_ID as CHARAKA_RULE_ID,
-    SOURCE_ID as CHARAKA_SOURCE_ID,
     CharaKarakaResult,
     compute_chara_karakas,
 )
+from astro_engine.chara_karaka import RULE_ID as CHARAKA_RULE_ID
 from astro_engine.methods import (
     Method,
     MethodMaturity,
@@ -28,7 +27,6 @@ from astro_engine.methods import (
     QuestionSpec,
 )
 from astro_engine.provenance import (
-    CalculationNode,
     MethodRunNode,
     PredictionNode,
     ProvenanceRegistry,
@@ -192,7 +190,10 @@ class JaiminiCareerMethod(Method):
             [
                 "Amatyakaraka is exposed as a structured career/profession signal only.",
                 "Tenth-house/lord relationships are not evaluated in this milestone.",
-                "Atmakaraka activity/work interpretation is not expanded beyond Chara Karaka context.",
+                (
+                    "Atmakaraka activity/work interpretation is not expanded beyond "
+                    "Chara Karaka context."
+                ),
                 "Timing is unavailable because no Jaimini timing rule is implemented.",
             ],
             [],
@@ -257,7 +258,11 @@ class JaiminiCareerMethod(Method):
         run_id = _stable_id(self.method_id, self.version, state.state_id, question.question_id)
         run_node_id: str | None = None
         if provenance_registry is not None:
-            parent_ids = [state.provenance.astrostate_node_id] if state.provenance.astrostate_node_id else []
+            parent_ids = (
+                [state.provenance.astrostate_node_id]
+                if state.provenance.astrostate_node_id
+                else []
+            )
             if chara_result and chara_result.provenance_node_id:
                 parent_ids.append(chara_result.provenance_node_id)
             run_node = MethodRunNode(
@@ -282,7 +287,11 @@ class JaiminiCareerMethod(Method):
                     ),
                     source_id=SOURCE_ID,
                     source_location=SOURCE_LOCATION,
-                    convention_id=chara_result.convention_id if chara_result else state.convention.id,
+                    convention_id=(
+                        chara_result.convention_id
+                        if chara_result
+                        else state.convention.id
+                    ),
                     parent_ids=(
                         [run_node_id]
                         + ([chara_result.provenance_node_id]
@@ -328,11 +337,11 @@ class JaiminiCareerMethod(Method):
             intermediate_findings=findings,
             predictions=predictions,
             assumptions=assumptions,
-            abstentions=(
-                [{"reason": prediction.abstention_reason}]
+            abstentions=[
+                {"reason": prediction.abstention_reason}
                 for prediction in predictions
                 if prediction.is_abstention
-            ),
+            ],
             unknowns=[
                 "Tenth-house/lord relationship is not implemented.",
                 "Atmakaraka activity/work interpretation is not implemented.",

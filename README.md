@@ -1,30 +1,28 @@
 # ⚙️ Astro Intelligence OS
 
-> A professional-grade, research-oriented astrology platform — deterministic calculations, isolated methodology execution, and rigorous outcome evaluation.
+> An offline deterministic astrology calculation engine with an experimental, career-specific method-comparison kernel.
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org)
-[![Node.js](https://img.shields.io/badge/node-18%2B-green.svg)](https://nodejs.org)
-[![Tests](https://img.shields.io/badge/tests-92%20passed-brightgreen.svg)]()
-[![Status](https://img.shields.io/badge/status-Phase%205%20IN_PROGRESS-orange.svg)]()
+[![Tests](https://img.shields.io/badge/tests-automated-brightgreen.svg)]()
+[![Status](https://img.shields.io/badge/status-M1%20GATE%200%20LOCAL_PASS-orange.svg)]()
 
 ---
 
 ## 🌟 What Is This?
 
-**Astro Intelligence OS** is a hybrid astronomical-astrological computation engine. It separates what can be **calculated with certainty** (planetary positions, dashas, vargas, nakshatras) from what must be **evaluated empirically** (method predictions vs. outcomes).
+**Astro Intelligence OS** is an offline astronomical-astrological computation engine. It separates deterministic calculation paths from experimental methodology outputs that still require independent validation and outcome evaluation.
 
-Think of it as a **scientific instrument** for astrology research — not a horoscope app, not a belief system, but a rigorous testing framework.
+Think of the current release as an **experimental research kernel** for astrology software — not a horoscope app, not a production platform, and not evidence that any astrological method is effective.
 
 ### The Core Insight
 
 | Layer | What It Does | How It Works |
 |-------|-------------|-------------|
-| **Layer 1 — Astronomy** | Computes exact planetary positions | Deterministic math via Swiss Ephemeris |
-| **Layer 2 — Methodology** | Applies classical/modern rules | Isolated, auditable rule engines |
-| **Layer 3 — Convergence** | Resolves disagreements between methods | Statistical analysis, dissent tracking |
-| **Layer 4 — Evaluation** | Measures prediction accuracy | Blinded against actual outcomes |
-| **Layer 5 — LLM Synthesis** | Generates human-readable reports | Only at the final layer, never in calculation |
+| **Layer 1 — Astronomy** | Computes supported planetary positions | Deterministic math via Swiss Ephemeris; validation is per calculation |
+| **Layer 2 — Methodology** | Applies experimental rules | Isolated method interfaces with explicit maturity and limitations |
+| **Layer 3 — Convergence** | Compares disagreements between methods | Planned; no general convergence engine is implemented |
+| **Layer 4 — Evaluation** | Measures prediction behavior | Planned; no predictive-efficacy claim is made |
+| **Layer 5 — LLM Synthesis** | Generates human-readable reports | Planned downstream layer; never part of calculation |
 
 ---
 
@@ -36,17 +34,21 @@ Most astrology software:
 - Has no way to verify if it was correct
 - Mixes calculation with belief
 
-**Astro Intelligence OS** is different because:
+The design direction is different because it aims to make these boundaries explicit:
 
 1. **No LLM in the calculation layer** — astronomical positions are pure math
-2. **Method isolation** — Parashari cannot leak information into Jaimini results
-3. **Immutable state** — `AstroState` is frozen once generated; no hidden mutations
-4. **Full provenance** — every prediction traces back to exact ephemeris calculations
-5. **Empirical evaluation** — predictions are logged before outcomes; accuracy is measured honestly
+2. **Method isolation** — Parashari must not leak information into Jaimini results
+3. **Immutable state target** — `AstroState` is intended to be frozen once generated; deep immutability is a later gate
+4. **Provenance target** — auditable predictions must trace to their inputs and ephemeris; mandatory eligibility is a later gate
+5. **Empirical evaluation target** — predictions must be locked before outcomes; the evaluation subsystem is not yet implemented
 
 ---
 
 ## 🏗️ Architecture
+
+The following is the long-term target architecture. The current checkout implements
+the Python engine and experimental method layer; convergence, evaluation, UI, and
+LLM synthesis remain planned gates.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -78,12 +80,12 @@ Most astrology software:
 
 ### Python Engine (`/engine`)
 - **AstronomyEngine** — wrapper around Swiss Ephemeris
-- **AstroState** — immutable, serializable chart snapshot
+- **AstroState** — serializable chart snapshot; deep immutability is a later gate
 - **ConventionProfile** — explicit ayanamsa/house system selection
-- **Method SDK** — isolated execution framework
-- **Provenance Tracking** — full audit trail for every prediction
+- **Method SDK** — experimental isolated execution framework
+- **Provenance Tracking** — provenance primitives; auditable eligibility is a later gate
 
-### TypeScript Apps (`/apps`)
+### Planned product surfaces (not in this checkout)
 - **API Server** — REST/GraphQL interface
 - **Web UI** — interactive chart viewer
 - **Research Cockpit** — evaluation dashboard
@@ -98,8 +100,9 @@ Most astrology software:
 
 ### Prerequisites
 - Python 3.11+
-- Node.js 18+
-- Docker (optional, for sandboxed execution)
+- `uv` 0.9+
+
+Node.js and Docker are not required for the current offline engine boundary.
 
 ### Install
 
@@ -108,40 +111,31 @@ Most astrology software:
 git clone https://github.com/dogauto/astro-intelligence-os.git
 cd "astro-intelligence-os"
 
-# Python engine
-cd engine && pip install -e ".[dev]"
-
-# TypeScript apps
-cd ../apps/api && npm install && npm run dev
+# Python engine (locked environment)
+cd engine && uv sync --locked --extra dev
 ```
 
 ### Run Tests
 
 ```bash
 # Python
-cd engine && pytest -v
-
-# TypeScript
-cd apps/api && npm test
+cd engine && uv run pytest -v
 ```
 
 ---
 
 ## 🎯 Current Status
 
-| Phase | Description | Status |
-|-------|-------------|--------|
-| **Phase 0** | Architecture documentation | ✅ VERIFIED |
-| **Phase 1** | Astronomy engine, ConventionProfile | ✅ VERIFIED |
-| **Phase 2** | AstroState builder, immutability | ✅ VERIFIED |
-| **Phase 3** | Core calculations (Vargas, Dasha, Shadbala) | ✅ VERIFIED_SUBSET |
-| **Phase 4** | Method SDK, isolation enforcement | ✅ VERIFIED |
-| **Phase 5** | First complete methodologies | 🔄 IN_PROGRESS |
-| **Phase 6** | Convergence engine | 📋 SPECIFIED |
-| **Phase 7** | LLM synthesis layer | 📋 PLANNED |
-| **Phase 8** | Evaluation framework | 📋 PLANNED |
+The current supported claim is:
 
-**Latest Commit:** Gate 8 provenance + multi-method execution + Jaimini career methods
+> **An offline deterministic astrology calculation engine with an experimental, career-specific method-comparison kernel.**
+
+| Milestone | Description | Status |
+|-----------|-------------|--------|
+| **M1 / Gate 0** | Reproducible package boundary and truthful CI | ✅ LOCAL_PASS_PENDING_CI |
+| **M2+** | Subsequent correctness, provenance, evaluation, and security gates | 📋 NOT_STARTED |
+
+Later gates remain planned until their current executable checks and evidence are complete.
 
 ---
 
@@ -175,13 +169,15 @@ This is a research project. Contributions welcome in:
 - Documentation and specification clarity
 - Performance optimization
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+Contribution guidelines will be published with the release boundary.
 
 ---
 
 ## 📄 License
 
-MIT License — see [LICENSE](LICENSE) for details.
+The repository metadata is currently inconsistent: no root `LICENSE` file is present,
+while the engine package metadata declares `Proprietary`. Resolve this before any
+distribution release; this M1 branch does not make a new licensing decision.
 
 ---
 
