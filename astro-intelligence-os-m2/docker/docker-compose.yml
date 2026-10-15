@@ -1,0 +1,33 @@
+version: "3.9"
+
+services:
+  # PostgreSQL primary database
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: astro_intelligence
+      POSTGRES_USER: astro
+      POSTGRES_PASSWORD: astro_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # Redis for caching and job queues
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  # Python calculation engine (test runner)
+  engine:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.engine
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgresql://astro:astro_dev_password@postgres:5432/astro_intelligence
+
+volumes:
+  pgdata:

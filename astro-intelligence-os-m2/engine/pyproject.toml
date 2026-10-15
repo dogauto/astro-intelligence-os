@@ -1,0 +1,79 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "astro-engine"
+version = "0.1.0"
+description = "Deterministic astronomy and astrology calculation engine for Astro Intelligence OS"
+requires-python = ">=3.11"
+license = {text = "Proprietary"}
+
+dependencies = [
+    "pyswisseph>=2.10.3.2",
+    "pytz>=2024.1",
+    "timezonefinder>=6.5.0",
+    "pydantic>=2.7.0",
+    "numpy>=1.26.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=5.0.0",
+    "pytest-xdist>=3.5.0",
+    "ruff>=0.4.0",
+    "mypy>=1.10.0",
+]
+
+[project.scripts]
+astro = "astro_cli.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = [
+    "astro_engine",
+    "astro_engine.*",
+    "astro_cli",
+    "astro_cli.*",
+]
+exclude = [
+    "governance",
+    "governance.*",
+    "astro_engine.governance",
+    "astro_engine.governance.*",
+]
+namespaces = false
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "A", "SIM", "TCH"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = "swisseph.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+ignore_errors = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+
+[tool.coverage.run]
+branch = true
+source = ["astro_engine"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 88

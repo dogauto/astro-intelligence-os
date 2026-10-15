@@ -1,0 +1,20 @@
+FROM python:3.11-slim
+
+WORKDIR /app/engine
+
+# Install system dependencies for pyswisseph
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy engine code
+COPY engine/pyproject.toml engine/README.md ./
+COPY engine/src ./src
+COPY engine/tests ./tests
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -e ".[dev]"
+
+# Default: run tests
+CMD ["pytest", "-v"]
